@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% if request.cookies.get('session_id') %}
+<div class="league-container">
+    <h2>Euro 2024 Whatsapp League</h2>
+    <hr>
+    <div class="standings">
+        <h3>🏆 Leaderboard</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Name</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in standings %}
+                <tr id="{{user.rank}}">
+                    <td>{{user.rank}}</td>
+                    <td>{{user.name}}</td>
+                    <td>{{user.points}}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="fixtures">
+        <h3>⚽ Today's Matches</h3>
+    </div>
+</div>
+{% else %}
+<div class="create-session-container">
+    <form action="{{url_for('create_session')}}" method="post">
+        <input type="text" id="username" name="username" placeholder="Enter your name">
+        <button type="submit">Continue</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

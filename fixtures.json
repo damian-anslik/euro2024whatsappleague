@@ -1,0 +1,30 @@
+{
+    "_default": {
+        "1": {
+            "updated_at": 1712187264.246193,
+            "id": 1035482,
+            "timestamp": 1712255400,
+            "status": "NS",
+            "can_bet": true,
+            "home_team": "Liverpool",
+            "away_team": "Sheffield Utd",
+            "home_team_logo": "https://media.api-sports.io/football/teams/40.png",
+            "away_team_logo": "https://media.api-sports.io/football/teams/62.png",
+            "home_goals": null,
+            "away_goals": null
+        },
+        "2": {
+            "updated_at": 1712187264.246193,
+            "id": 1035480,
+            "timestamp": 1712258100,
+            "status": "NS",
+            "can_bet": true,
+            "home_team": "Chelsea",
+            "away_team": "Manchester United",
+            "home_team_logo": "https://media.api-sports.io/football/teams/49.png",
+            "away_team_logo": "https://media.api-sports.io/football/teams/33.png",
+            "home_goals": null,
+            "away_goals": null
+        }
+    }
+}
