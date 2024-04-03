@@ -1,7 +1,9 @@
 import requests
 import datetime
+import logging
 import tinydb
 import uuid
+import os
 
 bets_db = tinydb.TinyDB("bets.json", indent=4)
 users_db = tinydb.TinyDB("users.json", indent=4)
@@ -18,7 +20,7 @@ def get_matches_from_api(
         "season": season,
     }
     headers = {
-        "X-RapidAPI-Key": "1b00e2a896msh42da2ffb9f236ffp133ebejsn0ea9e4845de1",
+        "X-RapidAPI-Key": os.getenv("RAPIDAPI_KEY"),
         "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com",
     }
     response = requests.get(url, headers=headers, params=querystring)
@@ -58,7 +60,7 @@ def get_matches(league_id: str, season: str, date: datetime.datetime) -> list[di
         and tinydb.where("timestamp") <= date.timestamp() + 24 * 60 * 60
     )
     if not stored_match_details:
-        print("Fetching fixtures from API for the first time")
+        logging.info("No fixtures found in the DB, fetching from the API")
         todays_matches = get_matches_from_api(league_id, season, date)
         fixtures_db.insert_multiple(todays_matches)
         todays_matches = sorted(stored_match_details, key=lambda x: x["timestamp"])
@@ -80,7 +82,9 @@ def get_matches(league_id: str, season: str, date: datetime.datetime) -> list[di
         for fixture in stored_match_details
     )
     if has_ongoing_matches and not had_update_in_last_5_mins:
-        print("Has ongoing matches and fixtures were not updated in the last 5 mins")
+        logging.info(
+            "Has ongoing matches and fixtures were not updated in the last 5 mins"
+        )
         # If there are ongoing matches and the fixtures were not updated in the last 5 mins, update the fixtures
         new_match_details = get_matches_from_api(league_id, season, date)
         for match_details in new_match_details:
@@ -91,7 +95,7 @@ def get_matches(league_id: str, season: str, date: datetime.datetime) -> list[di
         )
         return new_match_details
     else:
-        print("No ongoing matches or fixtures were updated in the last 5 mins")
+        logging.info("No ongoing matches or fixtures were updated in the last 5 mins")
         # If there are no ongoing matches or the fixtures were updated in the last 5 mins, return the stored fixtures
         stored_match_details = sorted(
             stored_match_details, key=lambda x: x["timestamp"]
