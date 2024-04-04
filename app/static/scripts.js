@@ -51,6 +51,7 @@ const renderMatchDetails = (matchData, userMatchBet) => {
     userBetData,
     matchStatus
   ) => {
+    console.log(matchId, userBetData);
     let form = document.createElement("form");
     form.action = "/bets";
     form.method = "POST";
@@ -59,12 +60,12 @@ const renderMatchDetails = (matchData, userMatchBet) => {
     homeTeamBet.type = "number";
     homeTeamBet.name = "home_goals";
     homeTeamBet.min = 0;
-    homeTeamBet.placeholder = `Your Prediction for ${matchData.home_team}`;
+    homeTeamBet.placeholder = `Your Prediction for ${matchData.home_team_name}`;
     homeTeamBet.required = true;
     let awayTeamBet = document.createElement("input");
     awayTeamBet.type = "number";
     awayTeamBet.name = "away_goals";
-    awayTeamBet.placeholder = `Your Prediction for ${matchData.away_team}`;
+    awayTeamBet.placeholder = `Your Prediction for ${matchData.away_team_name}`;
     awayTeamBet.min = 0;
     awayTeamBet.required = true;
     let submit = document.createElement("button");
@@ -85,8 +86,8 @@ const renderMatchDetails = (matchData, userMatchBet) => {
       submit.innerText = "Predict Score";
     }
     if (userBetData) {
-      homeTeamBet.value = userBetData.home_goals;
-      awayTeamBet.value = userBetData.away_goals;
+      homeTeamBet.value = userBetData.predicted_home_goals;
+      awayTeamBet.value = userBetData.predicted_away_goals;
     }
     let fixtureId = document.createElement("input");
     fixtureId.type = "hidden";
@@ -114,16 +115,16 @@ const renderMatchDetails = (matchData, userMatchBet) => {
   teamsInfo.classList.add("teams-info");
   // Show information about the teams
   let homeTeamInfo = createTeamDetailsElement(
-    matchData.home_team,
+    matchData.home_team_name,
     matchData.home_team_logo
   );
   let awayTeamInfo = createTeamDetailsElement(
-    matchData.away_team,
+    matchData.away_team_name,
     matchData.away_team_logo
   );
   let teamDivider = createDividerElement(
-    matchData.home_goals,
-    matchData.away_goals
+    matchData.home_team_goals,
+    matchData.away_team_goals
   );
   teamsInfo.appendChild(homeTeamInfo);
   teamsInfo.appendChild(teamDivider);
@@ -132,7 +133,7 @@ const renderMatchDetails = (matchData, userMatchBet) => {
   fixtureInfo.appendChild(teamsInfo);
   // Bet form
   let betForm = createBetFormElement(
-    matchData.can_bet,
+    matchData.can_users_place_bets,
     matchData.id,
     userMatchBet[0],
     matchData.status
@@ -153,7 +154,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
   matches.forEach((match) => {
-    let matchBets = userBets.filter((bet) => bet.fixture_id === match.id);
+    let matchBets = userBets.filter((bet) => bet.match_id === match.id);
     renderMatchDetails(match, matchBets);
   });
 });

@@ -59,12 +59,12 @@ async def get_matches(request: Request):
     }
     match_date = datetime.datetime.today()
     id, season = leagues.get("Premier League").values()
-    fixtures = services.get_matches(
+    matches = services.get_matches(
         league_id=id,
         season=season,
         date=match_date,
     )
-    return fixtures
+    return matches
 
 
 @app_router.get("/bets")
@@ -88,7 +88,7 @@ def place_bet(
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     services.place_bet(
         user_id=session_id,
-        fixture_id=fixture_id,
+        match_id=fixture_id,
         home_goals=home_goals,
         away_goals=away_goals,
     )
