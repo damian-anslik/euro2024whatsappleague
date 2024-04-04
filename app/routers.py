@@ -25,8 +25,10 @@ def create_session(username: str = Form(...)):
 def read_root(request: Request):
     session_id = request.cookies.get("session_id", None)
     if not session_id or not services.check_user_session(session_id):
+        # Delete the cookie if the session is not valid
+        if "session_id" in request.cookies:
+            del request.cookies["session_id"]
         response = templates.TemplateResponse("index.html", {"request": request})
-        response.delete_cookie("session_id")
         return response
     league_standings = services.get_current_standings()
     return templates.TemplateResponse(
@@ -39,10 +41,7 @@ def read_root(request: Request):
 
 
 @app_router.get("/matches")
-async def get_matches(request: Request):
-    session_id = request.cookies.get("session_id", None)
-    if not session_id or not services.check_user_session(session_id):
-        return templates.TemplateResponse("index.html", {"request": request})
+async def get_matches():
     leagues = {
         "Premier League": {
             "id": "39",
@@ -71,7 +70,7 @@ async def get_matches(request: Request):
 async def bets(request: Request):
     session_id = request.cookies.get("session_id", None)
     if not session_id or not services.check_user_session(session_id):
-        return templates.TemplateResponse("index.html", {"request": request})
+        return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     user_bets = services.get_user_bets(user_id=session_id)
     return user_bets
 
@@ -84,7 +83,7 @@ def place_bet(
     away_goals: int = Form(...),
 ):
     session_id = request.cookies.get("session_id", None)
-    if not session_id:
+    if not session_id or not services.check_user_session(session_id):
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     services.place_bet(
         user_id=session_id,

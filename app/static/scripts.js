@@ -102,14 +102,16 @@ const renderMatchDetails = (matchData, userMatchBet) => {
 
   let fixtureInfo = document.createElement("div");
   fixtureInfo.classList.add("fixture-info");
-  // Render time
   let fixtureTime = document.createElement("span");
-  fixtureTime.innerText = new Date(
-    matchData.timestamp * 1000
-  ).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  fixtureTime.classList.add("fixture-time");
+  // For some reason the timestamp is off by an hour, so we need to subtract an hour from it
+  let timestamp = new Date(matchData.timestamp).getTime();
+  fixtureTime.innerText =
+    "Today " +
+    new Date(timestamp - 60 * 60 * 1000).toLocaleString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   // Render teams
   let teamsInfo = document.createElement("div");
   teamsInfo.classList.add("teams-info");
