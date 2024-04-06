@@ -64,11 +64,12 @@ form {
 }
 
 .teams-info {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  justify-items: center;
   align-items: center;
-  padding: 0.5rem;
+  margin-block: 0.5rem;
 }
 
 .team-info {
