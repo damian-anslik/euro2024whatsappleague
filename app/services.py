@@ -157,16 +157,18 @@ def get_current_standings() -> list[dict]:
             {"user_id": user["id"], "name": user["name"], "points": user_points}
         )
     standings.sort(key=lambda x: x["points"], reverse=True)
-    # Rank the standings, take care of ties
+    # # Rank the standings, take care of ties, for example, if two users have rank 1, the next should be 2
+    current_rank = 1
     for i, user in enumerate(standings):
         if i == 0:
-            user["rank"] = 1
+            user["rank"] = current_rank
         else:
             previous_user = standings[i - 1]
             if user["points"] == previous_user["points"]:
                 user["rank"] = previous_user["rank"]
             else:
-                user["rank"] = i + 1
+                current_rank += 1
+                user["rank"] = current_rank
     return standings
 
 
