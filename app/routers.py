@@ -1,7 +1,9 @@
+import datetime
+import logging
+
 from fastapi import APIRouter, Request, Form, status
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
-import datetime
 
 from app import services, auth
 
@@ -87,10 +89,14 @@ def place_bet(
     session_id = request.cookies.get("session_id", None)
     if not session_id or not auth.check_user_session(session_id):
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    services.create_user_match_prediction(
-        user_id=session_id,
-        match_id=fixture_id,
-        predicted_home_goals=home_goals,
-        predicted_away_goals=away_goals,
-    )
-    return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    try:
+        services.create_user_match_prediction(
+            user_id=session_id,
+            match_id=fixture_id,
+            predicted_home_goals=home_goals,
+            predicted_away_goals=away_goals,
+        )
+    except Exception as e:
+        logging.error(f"Error placing bet: {e}")
+    finally:
+        return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
