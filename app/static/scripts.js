@@ -102,12 +102,16 @@ const renderMatchDetails = (matchData, userMatchBet) => {
 
   let fixtureInfo = document.createElement("div");
   fixtureInfo.classList.add("fixture-info");
-  if (!matchData.can_users_place_bets) {
+  let isOngoingMatch = matchData.status in { "1H": 1, "2H": 1, ET: 1, HT: 1 };
+  if (!matchData.can_users_place_bets && !isOngoingMatch) {
     fixtureInfo.classList.add("disabled");
+  } else if (isOngoingMatch) {
+    fixtureInfo.classList.add("ongoing");
   }
   let fixtureTime = document.createElement("span");
   fixtureTime.classList.add("fixture-time");
   let timestamp = new Date(matchData.timestamp).getTime();
+  console.log(isOngoingMatch, matchData.status);
   fixtureTime.innerText = {
     NS:
       "Today " +
@@ -119,7 +123,6 @@ const renderMatchDetails = (matchData, userMatchBet) => {
     HT: "Half Time",
     "2H": "Second Half",
     ET: "Extra Time",
-    PEN: "Penalties",
     FT: "Full Time",
   }[matchData.status];
   // Render teams

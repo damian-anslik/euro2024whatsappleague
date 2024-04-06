@@ -63,8 +63,13 @@ form {
   padding: 1rem;
 }
 
+.fixture-info.ongoing {
+  opacity: 0.75;
+  border: 1px solid #007bff;
+}
+
 .fixture-info.disabled {
-  opacity: 0.7;
+  opacity: 0.5;
   border: 1px solid #ccc;
 }
 
