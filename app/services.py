@@ -19,7 +19,9 @@ finished_match_statuses = ["FT", "AET", "PEN"]
 
 
 def get_matches_from_api(
-    league_ids: list[str], season: str, date: datetime.datetime
+    league_ids: list[str],
+    season: str,
+    date: datetime.datetime,
 ) -> list[dict]:
     url = f"https://{os.getenv('RAPIDAPI_BASE_URL')}/v3/fixtures"
     headers = {
@@ -39,107 +41,111 @@ def get_matches_from_api(
         for fixture in response_data:
             fixture_status = fixture["fixture"]["status"]["short"]
             can_user_place_bet = fixture_status in scheduled_match_statuses
-            parsed_fixture = Match(
-                id=fixture["fixture"]["id"],
-                timestamp=datetime.datetime.fromtimestamp(
-                    fixture["fixture"]["timestamp"],
-                    datetime.UTC,
-                ).isoformat(),
-                status=fixture_status,
-                league_id=league_id,
-                season=season,
-                can_users_place_bets=can_user_place_bet,
-                home_team_name=fixture["teams"]["home"]["name"],
-                away_team_name=fixture["teams"]["away"]["name"],
-                home_team_logo=fixture["teams"]["home"]["logo"],
-                away_team_logo=fixture["teams"]["away"]["logo"],
-                home_team_goals=fixture["goals"]["home"],
-                away_team_goals=fixture["goals"]["away"],
-                updated_at=datetime.datetime.now(datetime.UTC).isoformat(),
+            parsed_fixtures.append(
+                {
+                    "id": fixture["fixture"]["id"],
+                    "timestamp": datetime.datetime.fromtimestamp(
+                        fixture["fixture"]["timestamp"],
+                        datetime.UTC,
+                    ).isoformat(),
+                    "status": fixture_status,
+                    "league_id": league_id,
+                    "season": season,
+                    "can_users_place_bets": can_user_place_bet,
+                    "home_team_name": fixture["teams"]["home"]["name"],
+                    "away_team_name": fixture["teams"]["away"]["name"],
+                    "home_team_logo": fixture["teams"]["home"]["logo"],
+                    "away_team_logo": fixture["teams"]["away"]["logo"],
+                    "home_team_goals": fixture["goals"]["home"],
+                    "away_team_goals": fixture["goals"]["away"],
+                    "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+                }
             )
-            parsed_fixtures.append(parsed_fixture.model_dump())
     return parsed_fixtures
 
 
-def get_matches(
-    league_ids: list[str], season: str, date: datetime.datetime
+def get_matches_for_given_date(
+    date: datetime.datetime,
 ) -> list[dict]:
-    """
-    1. Check if the fixtures for the day are already stored in the DB
-    2. If not, make a request to the API to get the fixtures for the day
-    3. Store the fixtures in the DB
-    4. On subsequent requests, check if there are ongoing matches
-    5. If there are ongoing matches, update the fixtures in the DB every 5 mins
-    6. Return the fixtures sorted by timestamp and whether the user can bet on them
-    """
-    stored_match_details = []
-    for league_id in league_ids:
-        stored_match_details.extend(
-            supabase_client.table("matches")
-            .select("*")
-            .eq("league_id", league_id)
-            .gt("timestamp", date.isoformat())
-            .lt("timestamp", (date + datetime.timedelta(days=1)).isoformat())
-            .execute()
-            .data
+    response_data = (
+        supabase_client.table("matches")
+        .select("*")
+        .gt("timestamp", date.isoformat())
+        .lt("timestamp", (date + datetime.timedelta(days=1)).isoformat())
+        .execute()
+        .data
+    )
+    return response_data
+
+
+def did_check_for_matches_today(params: str) -> bool:
+    response_data = (
+        supabase_client.table("match_checks")
+        .select("*")
+        .eq("params", params)
+        .execute()
+        .data
+    )
+    return bool(response_data)
+
+
+def update_match_data(
+    league_ids: list[str],
+    season: str,
+    date: datetime.datetime,
+):
+    matches_in_db = get_matches_for_given_date(date)
+    if not matches_in_db:
+        match_check_string = (
+            f"{','.join(league_ids)}-{season}-{date.date().strftime('%Y-%m-%d')}"
         )
-    if not stored_match_details:
-        logging.info("No fixtures found in the DB, fetching from the API")
+        # It is possible that there are no matches on a given date, in this case, we should check if we already checked for matches today
+        if did_check_for_matches_today(match_check_string):
+            logging.info("No matches in DB, already checked for matches today")
+            return
+        logging.info("No matches found in the DB, fetching from the API for first time")
         todays_matches = get_matches_from_api(league_ids, season, date)
         supabase_client.table("matches").upsert(todays_matches).execute()
-        todays_matches = sorted(stored_match_details, key=lambda x: x["timestamp"])
-        todays_matches = sorted(
-            stored_match_details, key=lambda x: x["can_users_place_bets"], reverse=True
+        # Log that we checked for matches today
+        supabase_client.table("match_checks").insert(match_check_string).execute()
+        return
+    # Check if there are ongoing matches
+    ongoing_matches = []
+    for match in matches_in_db:
+        if not (
+            datetime.datetime.now(datetime.UTC).timestamp()
+            > datetime.datetime.fromisoformat(match["timestamp"]).timestamp()
+            and match["status"] not in finished_match_statuses
+        ):
+            continue
+        ongoing_matches.append(match["id"])
+    if not ongoing_matches:
+        logging.info("No ongoing matches found")
+        return
+    ongoing_match_league_ids = list(
+        set(
+            [
+                match["league_id"]
+                for match in matches_in_db
+                if match["id"] in ongoing_matches
+            ]
         )
-        return todays_matches
-    parsed_matches = [Match(**match) for match in stored_match_details]
-    # Checks if current time is greater than the timestamp of the fixture and the fixture is not yet finished
-    has_ongoing_matches = any(
-        datetime.datetime.now(datetime.UTC).timestamp()
-        > datetime.datetime.fromisoformat(match.timestamp).timestamp()
-        and match.status not in finished_match_statuses
-        for match in parsed_matches
     )
-    # Checks if the fixtures were updated in the last 5 mins
-    has_update_in_last_5_mins = any(
-        datetime.datetime.now(datetime.UTC).timestamp()
-        - datetime.datetime.fromisoformat(match.updated_at).timestamp()
-        < 60 * 5
-        for match in parsed_matches
+    # If there are ongoing matches, update the fixtures
+    logging.info("Updating fixtures")
+    date_from_midnight = datetime.datetime(
+        date.year, date.month, date.day, 0, 0, 0, tzinfo=datetime.UTC
     )
-    if has_ongoing_matches and not has_update_in_last_5_mins:
-        logging.info(
-            "Has ongoing matches and fixtures were not updated in the last 5 mins"
-        )
-        # If there are ongoing matches and the fixtures were not updated in the last 5 mins, update the fixtures
-        stored_match_details = []
-        stored_match_details = get_matches_from_api(league_ids, season, date)
-        supabase_client.table("matches").upsert(stored_match_details).execute()
-    else:
-        logging.info("No ongoing matches or fixtures were updated in the last 5 mins")
-    # Return the matches sorted as follows:
-    # 1. Ongoing matches
-    # 2. Matches that users can bet on
-    # 3. Matches that are yet to start
-    matches_user_can_bet_on = [
-        match for match in parsed_matches if match.can_users_place_bets
-    ]
-    ongoing_matches = [
-        match for match in parsed_matches if match.status in ongoing_match_statuses
-    ]
-    finished_matches = [
-        match for match in parsed_matches if match.status in finished_match_statuses
-    ]
-    parsed_matches = ongoing_matches + matches_user_can_bet_on + finished_matches
-    return [match.model_dump() for match in parsed_matches]
+    todays_matches = get_matches_from_api(
+        ongoing_match_league_ids, season, date_from_midnight
+    )
+    supabase_client.table("matches").upsert(todays_matches).execute()
 
 
 def get_current_standings() -> list[dict]:
     matches = supabase_client.table("matches").select("*").execute().data
     ongoing_matches = [
-        match["id"]
-        for match in matches
-        if match["status"] in ["1H", "HT", "2H", "ET", "BT", "P", "INT"]
+        match["id"] for match in matches if match["status"] in ongoing_match_statuses
     ]
     users = supabase_client.table("sessions").select("*").execute().data
     bets = supabase_client.table("bets").select("*").execute().data
@@ -254,7 +260,7 @@ def create_user_match_prediction(
         match_date = datetime.datetime(
             todays_date.year, todays_date.month, todays_date.day
         )
-        get_matches(
+        update_match_data(
             league_ids=[match_data["league_id"]],
             season=match_data["season"],
             date=match_date,

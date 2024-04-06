@@ -51,7 +51,6 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     userBetData,
     matchStatus
   ) => {
-    console.log(matchId, userBetData);
     let form = document.createElement("form");
     form.action = "/bets";
     form.method = "POST";
@@ -111,15 +110,13 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
   let fixtureTime = document.createElement("span");
   fixtureTime.classList.add("fixture-time");
   let timestamp = new Date(matchData.timestamp).getTime();
-  console.log(isOngoingMatch, matchData.status);
   fixtureTime.innerText = {
-    NS: isToday
-      ? "Today "
-      : "Tomorrow " +
-        new Date(timestamp).toLocaleString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+    NS:
+      (isToday ? "Today " : "Tomorrow ") +
+      new Date(timestamp).toLocaleString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     "1H": "First Half",
     HT: "Half Time",
     "2H": "Second Half",
@@ -165,8 +162,7 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
-  let matches = await getMatches();
-  let userBets = await getUserBets();
+  let [matches, userBets] = await Promise.all([getMatches(), getUserBets()]);
   let todaysMatches = matches.today;
   let tomorrowsMatches = matches.tomorrow;
   if (todaysMatches.length === 0) {
