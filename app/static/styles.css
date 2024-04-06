@@ -63,6 +63,20 @@ form {
   padding: 1rem;
 }
 
+.fixture-info.ongoing {
+  opacity: 0.75;
+  border: 1px solid #007bff;
+}
+
+.fixture-info.disabled {
+  opacity: 0.5;
+  border: 1px solid #ccc;
+}
+
+.fixture-info.disabled input {
+  border: 1px solid #ccc;
+}
+
 .teams-info {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -91,6 +105,7 @@ table {
   width: 100%;
   table-layout: auto;
   border: 1px solid #007bff;
+  border-radius: 0.5rem;
 }
 
 th {
@@ -171,5 +186,5 @@ tr#3 > * {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.5rem;
+  /* gap: 0.5rem; */
 }

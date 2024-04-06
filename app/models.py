@@ -3,6 +3,8 @@ from pydantic import BaseModel
 
 class Match(BaseModel):
     id: int
+    league_id: int
+    season: str
     timestamp: str
     status: str
     can_users_place_bets: bool
