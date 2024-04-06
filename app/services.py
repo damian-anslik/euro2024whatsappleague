@@ -100,8 +100,7 @@ def get_matches(league_id: str, season: str, date: datetime.datetime) -> list[di
         )
         # If there are ongoing matches and the fixtures were not updated in the last 5 mins, update the fixtures
         new_match_details = get_matches_from_api(league_id, season, date)
-        for match_details in new_match_details:
-            supabase_client.table("matches").upsert(match_details).execute()
+        supabase_client.table("matches").upsert(new_match_details).execute()
         new_match_details = sorted(new_match_details, key=lambda x: x["timestamp"])
         new_match_details = sorted(
             new_match_details, key=lambda x: x["can_users_place_bets"], reverse=True
