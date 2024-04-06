@@ -120,23 +120,29 @@ def get_matches(league_id: str, season: str, date: datetime.datetime) -> list[di
 
 def get_current_standings() -> list[dict]:
     matches = supabase_client.table("matches").select("*").execute().data
+    ongoing_matches = [
+        match["id"]
+        for match in matches
+        if match["status"] in ["1H", "HT", "2H", "ET", "BT", "P", "INT"]
+    ]
     users = supabase_client.table("sessions").select("*").execute().data
     bets = supabase_client.table("bets").select("*").execute().data
     standings = []
     for user in users:
         user_bets = [bet for bet in bets if bet["user_id"] == user["id"]]
+        potential_points = 0
         user_points = 0
         for bet in user_bets:
             fixture = next(
                 fixture for fixture in matches if fixture["id"] == bet["match_id"]
             )
-            if fixture["status"] == "FT":
+            if fixture["status"] in ["FT", "AET", "PEN"]:
                 # Exact prediction
                 if (
                     bet["predicted_home_goals"] == fixture["home_team_goals"]
                     and bet["predicted_away_goals"] == fixture["away_team_goals"]
                 ):
-                    user_points += 3
+                    user_points += 5
                 # Goal difference
                 elif (bet["predicted_home_goals"] - bet["predicted_away_goals"]) == (
                     fixture["home_team_goals"] - fixture["away_team_goals"]
@@ -153,11 +159,43 @@ def get_current_standings() -> list[dict]:
                     user_points += 1
                 else:
                     user_points += 0
+            # If the fixture is ongoing, calculate the potential points the user can earn
+            if bet["match_id"] in ongoing_matches:
+                if (
+                    bet["predicted_home_goals"] == fixture["home_team_goals"]
+                    and bet["predicted_away_goals"] == fixture["away_team_goals"]
+                ):
+                    potential_points += 5
+                # Goal difference
+                elif (bet["predicted_home_goals"] - bet["predicted_away_goals"]) == (
+                    fixture["home_team_goals"] - fixture["away_team_goals"]
+                ):
+                    potential_points += 3
+                # Predicted the winner
+                elif (
+                    (bet["predicted_home_goals"] > bet["predicted_away_goals"])
+                    and (fixture["home_team_goals"] > fixture["away_team_goals"])
+                ) or (
+                    (bet["predicted_home_goals"] < bet["predicted_away_goals"])
+                    and (fixture["home_team_goals"] < fixture["away_team_goals"])
+                ):
+                    potential_points += 1
+                else:
+                    potential_points += 0
         standings.append(
-            {"user_id": user["id"], "name": user["name"], "points": user_points}
+            {
+                "user_id": user["id"],
+                "name": user["name"],
+                "points": user_points,
+                "potential_points": (
+                    potential_points if len(ongoing_matches) != 0 else None
+                ),
+            }
         )
+    # Sort the standings by points and then alphabetically by name
+    standings.sort(key=lambda x: x["name"])
     standings.sort(key=lambda x: x["points"], reverse=True)
-    # # Rank the standings, take care of ties, for example, if two users have rank 1, the next should be 2
+    # Rank the standings, take care of ties, for example, if two users have rank 1, the next should be 2
     current_rank = 1
     for i, user in enumerate(standings):
         if i == 0:

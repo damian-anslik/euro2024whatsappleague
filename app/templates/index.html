@@ -20,7 +20,12 @@
                 <tr id="{{user.rank}}">
                     <td>{{user.rank}}</td>
                     <td>{{user.name}}</td>
-                    <td>{{user.points}}</td>
+                    <td>
+                        {{user.points}}
+                        {% if user.potential_points %}
+                        (+{{ user.potential_points}})
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

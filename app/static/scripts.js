@@ -102,7 +102,9 @@ const renderMatchDetails = (matchData, userMatchBet) => {
 
   let fixtureInfo = document.createElement("div");
   fixtureInfo.classList.add("fixture-info");
-
+  if (!matchData.can_users_place_bets) {
+    fixtureInfo.classList.add("disabled");
+  }
   let fixtureTime = document.createElement("span");
   fixtureTime.classList.add("fixture-time");
   let timestamp = new Date(matchData.timestamp).getTime();
