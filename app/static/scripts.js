@@ -108,7 +108,7 @@ const renderMatchDetails = (matchData, userMatchBet) => {
   let timestamp = new Date(matchData.timestamp).getTime();
   fixtureTime.innerText =
     "Today " +
-    new Date(timestamp - 60 * 60 * 1000).toLocaleString("en-GB", {
+    new Date(timestamp).toLocaleString("en-GB", {
       hour: "2-digit",
       minute: "2-digit",
     });
