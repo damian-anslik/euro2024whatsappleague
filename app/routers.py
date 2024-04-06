@@ -53,21 +53,36 @@ async def get_matches():
             "id": "78",
             "season": "2023",
         },
-        "Euro 2024": {
-            "id": "4",
-            "season": "2024",
-        },
+        # "Euro 2024": {
+        #     "id": "4",
+        #     "season": "2024",
+        # },
     }
     # Show from today at midnight
     todays_date = datetime.datetime.now(datetime.UTC).today()
-    match_date = datetime.datetime(todays_date.year, todays_date.month, todays_date.day)
-    id, season = leagues.get("Bundesliga").values()
-    matches = services.get_matches(
-        league_id=id,
-        season=season,
-        date=match_date,
+    tomorrows_date = todays_date + datetime.timedelta(days=1)
+    todays_matches = services.get_matches(
+        league_ids=[
+            leagues["Premier League"]["id"],
+            leagues["Bundesliga"]["id"],
+        ],
+        season=leagues["Premier League"]["season"],
+        date=datetime.datetime(todays_date.year, todays_date.month, todays_date.day),
     )
-    return matches
+    tomorrows_matches = services.get_matches(
+        league_ids=[
+            leagues["Premier League"]["id"],
+            leagues["Bundesliga"]["id"],
+        ],
+        season=leagues["Premier League"]["season"],
+        date=datetime.datetime(
+            tomorrows_date.year, tomorrows_date.month, tomorrows_date.day
+        ),
+    )
+    return {
+        "today": todays_matches,
+        "tomorrow": tomorrows_matches,
+    }
 
 
 @app_router.get("/bets")

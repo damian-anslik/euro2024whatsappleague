@@ -189,6 +189,22 @@ tr#3 > * {
   align-items: center;
   /* gap: 0.5rem; */
 }
+.loading-indicator-container {
+  /* Show in middle of screen */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  color: white;
+  height: 100vh;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
 
 .loading-indicator {
   border: 6px solid #f3f3f3;
@@ -197,7 +213,7 @@ tr#3 > * {
   width: 50px;
   height: 50px;
   animation: spin 1s linear infinite;
-  margin: 15% auto;
+  margin: 20% auto;
 }
 
 @keyframes spin {

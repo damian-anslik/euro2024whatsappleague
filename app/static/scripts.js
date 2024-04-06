@@ -10,7 +10,7 @@ const getUserBets = async () => {
   return data;
 };
 
-const renderMatchDetails = (matchData, userMatchBet) => {
+const renderMatchDetails = (matchData, userMatchBet, isToday) => {
   const createTeamDetailsElement = (teamName, teamLogoUrl) => {
     let teamInfo = document.createElement("div");
     teamInfo.classList.add("team-info");
@@ -113,12 +113,13 @@ const renderMatchDetails = (matchData, userMatchBet) => {
   let timestamp = new Date(matchData.timestamp).getTime();
   console.log(isOngoingMatch, matchData.status);
   fixtureTime.innerText = {
-    NS:
-      "Today " +
-      new Date(timestamp).toLocaleString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+    NS: isToday
+      ? "Today "
+      : "Tomorrow " +
+        new Date(timestamp).toLocaleString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
     "1H": "First Half",
     HT: "Half Time",
     "2H": "Second Half",
@@ -154,23 +155,45 @@ const renderMatchDetails = (matchData, userMatchBet) => {
     matchData.status
   );
   fixtureInfo.appendChild(betForm);
-  document.querySelector(".fixtures").appendChild(fixtureInfo);
+  if (isToday) {
+    let fixtures = document.querySelector(".todays-fixtures");
+    fixtures.appendChild(fixtureInfo);
+  } else {
+    let fixtures = document.querySelector(".tomorrows-fixtures");
+    fixtures.appendChild(fixtureInfo);
+  }
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
   let matches = await getMatches();
   let userBets = await getUserBets();
-  if (matches.length === 0) {
+  let todaysMatches = matches.today;
+  let tomorrowsMatches = matches.tomorrow;
+  if (todaysMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
     noMatches.innerText = "No matches available at the moment";
-    let fixtures = document.querySelector(".fixtures");
+    let fixtures = document.querySelector(".todays-fixtures");
     fixtures.appendChild(noMatches);
-    return;
+  } else {
+    todaysMatches.forEach((match) => {
+      let matchBets = userBets.filter((bet) => bet.match_id === match.id);
+      renderMatchDetails(match, matchBets, true);
+    });
   }
-  matches.forEach((match) => {
-    let matchBets = userBets.filter((bet) => bet.match_id === match.id);
-    renderMatchDetails(match, matchBets);
-  });
+  if (tomorrowsMatches.length === 0) {
+    let noMatches = document.createElement("p");
+    noMatches.classList.add("no-matches");
+    noMatches.innerText = "No matches available at the moment";
+    let fixtures = document.querySelector(".tomorrows-fixtures");
+    fixtures.appendChild(noMatches);
+  } else {
+    tomorrowsMatches.forEach((match) => {
+      let matchBets = userBets.filter((bet) => bet.match_id === match.id);
+      renderMatchDetails(match, matchBets, false);
+    });
+  }
+  document.getElementsByClassName("todays-fixtures")[0].hidden = false;
+  document.getElementsByClassName("tomorrows-fixtures")[0].hidden = false;
   document.getElementsByClassName("loading-indicator-container")[0].remove();
 });
