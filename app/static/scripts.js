@@ -172,4 +172,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     let matchBets = userBets.filter((bet) => bet.match_id === match.id);
     renderMatchDetails(match, matchBets);
   });
+  document.getElementsByClassName("loading-indicator-container")[0].remove();
 });
