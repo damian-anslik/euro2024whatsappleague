@@ -122,9 +122,10 @@ def get_matches(league_id: str, season: str, date: datetime.datetime) -> list[di
 def get_current_standings() -> list[dict]:
     matches = supabase_client.table("matches").select("*").execute().data
     users = supabase_client.table("sessions").select("*").execute().data
+    bets = supabase_client.table("bets").select("*").execute().data
     standings = []
     for user in users:
-        user_bets = get_user_bets(user["id"])
+        user_bets = [bet for bet in bets if bet["user_id"] == user["id"]]
         user_points = 0
         for bet in user_bets:
             fixture = next(
