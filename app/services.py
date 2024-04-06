@@ -109,13 +109,20 @@ def get_matches(league_id: str, season: str, date: datetime.datetime) -> list[di
     else:
         logging.info("No ongoing matches or fixtures were updated in the last 5 mins")
     # Return the matches sorted as follows:
-    # 1. Matches that users can bet on
-    # 2. Ongoing matches
+    # 1. Ongoing matches
+    # 2. Matches that users can bet on
     # 3. Matches that are yet to start
-    sorted_matches = sorted(
-        parsed_matches, key=lambda x: (x.can_users_place_bets, x.status, x.timestamp)
-    )
-    return [match.model_dump() for match in sorted_matches]
+    matches_user_can_bet_on = [
+        match for match in parsed_matches if match.can_users_place_bets
+    ]
+    ongoing_matches = [
+        match for match in parsed_matches if match.status in ongoing_match_statuses
+    ]
+    finished_matches = [
+        match for match in parsed_matches if match.status in finished_match_statuses
+    ]
+    parsed_matches = ongoing_matches + matches_user_can_bet_on + finished_matches
+    return [match.model_dump() for match in parsed_matches]
 
 
 def get_current_standings() -> list[dict]:
@@ -224,13 +231,16 @@ def create_user_match_prediction(
         .data[0]
     )
     if not match_data["can_users_place_bets"]:
-        return {"error": "Cannot bet on a fixture that has started or finished"}
+        raise ValueError("User cannot place a bet on this fixture")
     # It's possible that the user is trying to place a bet on a fixture that has already started but the fixtures were not updated
     # In this case check the timestamp of the fixture and update the fixtures if necessary
     if (
         datetime.datetime.now(datetime.UTC).timestamp()
         > datetime.datetime.fromisoformat(match_data["timestamp"]).timestamp()
     ):
+        logging.info(
+            "User is trying to place a bet on an ongoing match, updating fixtures"
+        )
         todays_date = datetime.datetime.now(datetime.UTC).today()
         match_date = datetime.datetime(
             todays_date.year, todays_date.month, todays_date.day
@@ -252,8 +262,23 @@ def create_user_match_prediction(
         predicted_home_goals=predicted_home_goals,
         predicted_away_goals=predicted_away_goals,
     )
+    user_already_made_prediction_for_match = (
+        supabase_client.table("bets")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("match_id", match_id)
+        .execute()
+        .data
+    )
+    if user_already_made_prediction_for_match:
+        bet_data = {
+            "id": user_already_made_prediction_for_match[0]["id"],
+            **bet.model_dump(),
+        }
+    else:
+        bet_data = bet.model_dump()
     bet_in_db = BetInDB(
-        **supabase_client.table("bets").upsert(bet.model_dump()).execute().data[0]
+        **supabase_client.table("bets").upsert(bet_data).execute().data[0]
     )
     return bet_in_db.model_dump()
 
