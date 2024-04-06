@@ -3,7 +3,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 import datetime
 
-from app import services
+from app import services, auth
 
 app_router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -11,7 +11,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 @app_router.post("/session")
 def create_session(username: str = Form(...)):
-    session_id = services.create_user_session(username)
+    session_id = auth.create_user_session(username)
     response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     response.set_cookie(
         key="session_id",
@@ -24,7 +24,7 @@ def create_session(username: str = Form(...)):
 @app_router.get("/")
 def read_root(request: Request):
     session_id = request.cookies.get("session_id", None)
-    if not session_id or not services.check_user_session(session_id):
+    if not session_id or not auth.check_user_session(session_id):
         # Delete the cookie if the session is not valid
         if "session_id" in request.cookies:
             del request.cookies["session_id"]
@@ -56,8 +56,10 @@ async def get_matches():
             "season": "2024",
         },
     }
-    match_date = datetime.datetime.today()
-    id, season = leagues.get("Premier League").values()
+    # Show from today at midnight
+    todays_date = datetime.datetime.now(datetime.UTC).today()
+    match_date = datetime.datetime(todays_date.year, todays_date.month, todays_date.day)
+    id, season = leagues.get("Bundesliga").values()
     matches = services.get_matches(
         league_id=id,
         season=season,
@@ -69,7 +71,7 @@ async def get_matches():
 @app_router.get("/bets")
 async def bets(request: Request):
     session_id = request.cookies.get("session_id", None)
-    if not session_id or not services.check_user_session(session_id):
+    if not session_id or not auth.check_user_session(session_id):
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     user_bets = services.get_user_bets(user_id=session_id)
     return user_bets
@@ -83,12 +85,12 @@ def place_bet(
     away_goals: int = Form(...),
 ):
     session_id = request.cookies.get("session_id", None)
-    if not session_id or not services.check_user_session(session_id):
+    if not session_id or not auth.check_user_session(session_id):
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    services.place_bet(
+    services.create_user_match_prediction(
         user_id=session_id,
         match_id=fixture_id,
-        home_goals=home_goals,
-        away_goals=away_goals,
+        predicted_home_goals=home_goals,
+        predicted_away_goals=away_goals,
     )
     return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
