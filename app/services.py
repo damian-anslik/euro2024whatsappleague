@@ -40,7 +40,6 @@ def get_matches_from_api(
         response = requests.get(url, headers=headers, params=querystring)
         response_data = response.json()["response"]
         for fixture in response_data:
-            print(response_data)
             fixture_status = fixture["fixture"]["status"]["short"]
             can_user_place_bet = fixture_status in scheduled_match_statuses
             parsed_fixtures.append(
@@ -85,6 +84,25 @@ def get_matches_for_given_date(
         .execute()
         .data
     )
+    ongoing_or_finished_matches = [
+        match["id"]
+        for match in response_data
+        if match["status"] in [*ongoing_match_statuses, *finished_match_statuses]
+        and match["show"]
+    ]
+    if ongoing_or_finished_matches:
+        # Get the list of bets for the ongoing matches
+        bets = (
+            supabase_client.table("bets")
+            .select("*, user:sessions(name)")
+            .in_("match_id", ongoing_or_finished_matches)
+            .execute()
+            .data
+        )
+        # Add the bets on the ongoing matches to the response data)
+        for match in response_data:
+            match_bets = [bet for bet in bets if bet["match_id"] == match["id"]]
+            match["bets"] = match_bets
     return response_data
 
 

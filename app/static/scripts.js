@@ -159,6 +159,53 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     matchData.status
   );
   fixtureInfo.appendChild(betForm);
+  // Show other users bets if bets field is available
+  if (matchData.bets.length > 0) {
+    let revealUserPredictionsButton = document.createElement("button");
+    revealUserPredictionsButton.innerText = "Show Predictions From Other Users";
+    revealUserPredictionsButton.classList.add("show-bets-button");
+    revealUserPredictionsButton.onclick = () => {
+      let betsInfoTable = fixtureInfo.querySelector(".bets-info");
+      if (betsInfoTable.style.display === "none") {
+        betsInfoTable.style.display = "table";
+        revealUserPredictionsButton.innerText =
+          "Hide Predictions From Other Users";
+      } else {
+        betsInfoTable.style.display = "none";
+        revealUserPredictionsButton.innerText =
+          "Show Predictions From Other Users";
+      }
+    };
+    fixtureInfo.appendChild(revealUserPredictionsButton);
+    let betsInfoTable = document.createElement("table");
+    betsInfoTable.classList.add("bets-info");
+    let betsInfoTableHeader = document.createElement("tr");
+    let usernameHeader = document.createElement("th");
+    usernameHeader.innerText = "Name";
+    let homeGoalsHeader = document.createElement("th");
+    homeGoalsHeader.innerText = "Predicted Home Goals";
+    let awayGoalsHeader = document.createElement("th");
+    awayGoalsHeader.innerText = "Predicted Away Goals";
+    betsInfoTableHeader.appendChild(usernameHeader);
+    betsInfoTableHeader.appendChild(homeGoalsHeader);
+    betsInfoTableHeader.appendChild(awayGoalsHeader);
+    betsInfoTable.appendChild(betsInfoTableHeader);
+    matchData.bets.forEach((bet) => {
+      let betInfo = document.createElement("tr");
+      let username = document.createElement("td");
+      username.innerText = bet.user.name;
+      let homeGoals = document.createElement("td");
+      homeGoals.innerText = bet.predicted_home_goals;
+      let awayGoals = document.createElement("td");
+      awayGoals.innerText = bet.predicted_away_goals;
+      betInfo.appendChild(username);
+      betInfo.appendChild(homeGoals);
+      betInfo.appendChild(awayGoals);
+      betsInfoTable.appendChild(betInfo);
+    });
+    betsInfoTable.style.display = "none";
+    fixtureInfo.appendChild(betsInfoTable);
+  }
   if (isToday) {
     let fixtures = document.querySelector(".todays-fixtures");
     fixtures.appendChild(fixtureInfo);
@@ -171,29 +218,29 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
 document.addEventListener("DOMContentLoaded", async () => {
   let [matches, userBets] = await Promise.all([getMatches(), getUserBets()]);
   let todaysMatches = matches.today;
-  let showTodaysMatches = todaysMatches.filter((match) => match.show);
+  let todaysShownMatches = todaysMatches.filter((match) => match.show);
   let tomorrowsMatches = matches.tomorrow;
-  let showTomorrowsMatches = tomorrowsMatches.filter((match) => match.show);
-  if (showTodaysMatches.length === 0) {
+  let tomorrowsShownMatches = tomorrowsMatches.filter((match) => match.show);
+  if (todaysShownMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
     noMatches.innerText = "No matches available at the moment";
     let fixtures = document.querySelector(".todays-fixtures");
     fixtures.appendChild(noMatches);
   } else {
-    showTodaysMatches.forEach((match) => {
+    todaysShownMatches.forEach((match) => {
       let matchBets = userBets.filter((bet) => bet.match_id === match.id);
       renderMatchDetails(match, matchBets, true);
     });
   }
-  if (showTomorrowsMatches.length === 0) {
+  if (tomorrowsShownMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
     noMatches.innerText = "No matches available at the moment";
     let fixtures = document.querySelector(".tomorrows-fixtures");
     fixtures.appendChild(noMatches);
   } else {
-    showTomorrowsMatches.forEach((match) => {
+    tomorrowsShownMatches.forEach((match) => {
       let matchBets = userBets.filter((bet) => bet.match_id === match.id);
       renderMatchDetails(match, matchBets, false);
     });
