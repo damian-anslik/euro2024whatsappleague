@@ -265,6 +265,7 @@ def create_user_match_prediction(
     match_id: str,
     predicted_home_goals: int,
     predicted_away_goals: int,
+    # num_requests: int = 1,
 ) -> dict:
     match_data = (
         supabase_client.table("matches")
@@ -277,29 +278,33 @@ def create_user_match_prediction(
         raise ValueError("User cannot place a bet on this fixture")
     # It's possible that the user is trying to place a bet on a fixture that has already started but the fixtures were not updated
     # In this case check the timestamp of the fixture and update the fixtures if necessary
-    has_match_potentially_started = (
-        datetime.datetime.now(datetime.UTC).timestamp()
-        > datetime.datetime.fromisoformat(match_data["timestamp"]).timestamp()
-    )
-    if has_match_potentially_started:
-        logging.info(
-            "User is trying to place a bet on a what may be an ongoing match, updating fixtures"
-        )
-        todays_date = datetime.datetime.now(datetime.UTC).today()
-        match_date = datetime.datetime(
-            todays_date.year, todays_date.month, todays_date.day
-        )
-        update_match_data(
-            league_ids=[match_data["league_id"]],
-            season=match_data["season"],
-            date=match_date,
-        )
-        create_user_match_prediction(
-            user_id=user_id,
-            match_id=match_id,
-            predicted_home_goals=predicted_home_goals,
-            predicted_away_goals=predicted_away_goals,
-        )
+    # has_match_potentially_started = (
+    #     datetime.datetime.now(datetime.UTC).timestamp()
+    #     > datetime.datetime.fromisoformat(match_data["timestamp"]).timestamp()
+    # )
+    # if has_match_potentially_started:
+    #     logging.info(
+    #         "User is trying to place a bet on a what may be an ongoing match, updating fixtures"
+    #     )
+    #     todays_date = datetime.datetime.now(datetime.UTC).today()
+    #     match_date = datetime.datetime(
+    #         todays_date.year, todays_date.month, todays_date.day
+    #     )
+    #     MAX_NUM_REQUESTS = 2
+    #     if num_requests >= MAX_NUM_REQUESTS:
+    #         raise ValueError("User cannot place a bet on this fixture")
+    #     update_match_data(
+    #         league_ids=[match_data["league_id"]],
+    #         season=match_data["season"],
+    #         date=match_date,
+    #     )
+    #     create_user_match_prediction(
+    #         user_id=user_id,
+    #         match_id=match_id,
+    #         predicted_home_goals=predicted_home_goals,
+    #         predicted_away_goals=predicted_away_goals,
+    #         num_requests=num_requests + 1,
+    #     )
     bet_data = {
         "user_id": user_id,
         "match_id": match_id,
