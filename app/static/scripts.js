@@ -195,7 +195,7 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
   );
   fixtureInfo.appendChild(betForm);
   // Show other users bets if bets field is available
-  if (matchData.bets.length > 0) {
+  if (matchData.bets && matchData.bets.length > 0) {
     let revealUserPredictionsButton = document.createElement("button");
     revealUserPredictionsButton.innerText = "Show User Predictions";
     revealUserPredictionsButton.classList.add("show-bets-button");
@@ -254,6 +254,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let todaysShownMatches = todaysMatches.filter((match) => match.show);
   let tomorrowsMatches = matches.tomorrow;
   let tomorrowsShownMatches = tomorrowsMatches.filter((match) => match.show);
+  console.log(tomorrowsShownMatches);
   if (todaysShownMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
@@ -266,6 +267,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderMatchDetails(match, matchBets, true);
     });
   }
+  console.log(tomorrowsShownMatches.length);
   if (tomorrowsShownMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
