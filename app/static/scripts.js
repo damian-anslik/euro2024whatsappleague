@@ -62,6 +62,12 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     form.action = "/bets";
     form.method = "POST";
     form.classList.add("bet-form");
+    let errorContainer = document.createElement("div");
+    errorContainer.classList.add("error-container");
+    form.appendChild(errorContainer);
+    let successContainer = document.createElement("div");
+    successContainer.classList.add("success-container");
+    form.appendChild(successContainer);
     let homeTeamBet = document.createElement("input");
     homeTeamBet.type = "number";
     homeTeamBet.name = "home_goals";
@@ -83,7 +89,7 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
       if (matchStatus === "FT") {
         submit.innerText = "Match Ended";
       } else {
-        submit.innerText = "Match Started - Cannot Update Prediction Anymore";
+        submit.innerText = "Match In Progress";
       }
       submit.classList.add("disabled");
     } else if (userBetData) {
@@ -99,6 +105,35 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     fixtureId.type = "hidden";
     fixtureId.name = "fixture_id";
     fixtureId.value = matchId;
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorContainer.style.display = "none";
+      successContainer.style.display = "none";
+      fetch("/bets", {
+        method: "POST",
+        body: new FormData(form),
+      })
+        .then((response) => {
+          if (response.status === 500) {
+            throw new Error(
+              "Submitting predictions are now closed for this match. Reloading the page..."
+            );
+          }
+          return response.json();
+        })
+        .then((_) => {
+          successContainer.innerText = "Prediction Submitted Successfully";
+          successContainer.style.display = "block";
+          submit.innerText = "Update Prediction";
+        })
+        .catch((error) => {
+          errorContainer.style.display = "block";
+          errorContainer.innerText = error.message;
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
+        });
+    });
     form.appendChild(homeTeamBet);
     form.appendChild(awayTeamBet);
     form.appendChild(fixtureId);
@@ -162,18 +197,16 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
   // Show other users bets if bets field is available
   if (matchData.bets.length > 0) {
     let revealUserPredictionsButton = document.createElement("button");
-    revealUserPredictionsButton.innerText = "Show Predictions From Other Users";
+    revealUserPredictionsButton.innerText = "Show User Predictions";
     revealUserPredictionsButton.classList.add("show-bets-button");
     revealUserPredictionsButton.onclick = () => {
       let betsInfoTable = fixtureInfo.querySelector(".bets-info");
       if (betsInfoTable.style.display === "none") {
         betsInfoTable.style.display = "table";
-        revealUserPredictionsButton.innerText =
-          "Hide Predictions From Other Users";
+        revealUserPredictionsButton.innerText = "Hide User Predictions";
       } else {
         betsInfoTable.style.display = "none";
-        revealUserPredictionsButton.innerText =
-          "Show Predictions From Other Users";
+        revealUserPredictionsButton.innerText = "Show User Predictions";
       }
     };
     fixtureInfo.appendChild(revealUserPredictionsButton);
