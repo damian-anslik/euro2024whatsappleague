@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import datetime
 
@@ -29,7 +30,9 @@ def get_matches_from_api(
     parsed_fixtures = []
     for league_id in league_ids:
         querystring = {
-            "date": date.date().strftime("%Y-%m-%d"),
+            "date": datetime.datetime(date.year, date.month, date.day).strftime(
+                "%Y-%m-%d"
+            ),
             "league": league_id,
             "season": season,
         }
@@ -67,11 +70,17 @@ def get_matches_from_api(
 def get_matches_for_given_date(
     date: datetime.datetime,
 ) -> list[dict]:
+    start_of_day = datetime.datetime(
+        date.year, date.month, date.day, 0, 0, 0, tzinfo=datetime.UTC
+    )
+    end_of_day = datetime.datetime(
+        date.year, date.month, date.day, 23, 59, 59, tzinfo=datetime.UTC
+    )
     response_data = (
         supabase_client.table("matches")
         .select("*")
-        .gt("timestamp", date.isoformat())
-        .lt("timestamp", (date + datetime.timedelta(days=1)).isoformat())
+        .gt("timestamp", start_of_day.isoformat())
+        .lt("timestamp", end_of_day.isoformat())
         .execute()
         .data
     )
@@ -94,6 +103,9 @@ def update_match_data(
     season: str,
     date: datetime.datetime,
 ):
+    logging.info(
+        f"Updating match data for date: {date.date().strftime('%Y-%m-%d')}; league_ids: {league_ids}"
+    )
     matches_in_db = get_matches_for_given_date(date)
     if not matches_in_db:
         match_check_string = (
@@ -101,15 +113,18 @@ def update_match_data(
         )
         # It is possible that there are no matches on a given date, in this case, we should check if we already checked for matches today
         if did_check_for_matches_today(match_check_string):
-            logging.info("No matches in DB, already checked for matches today")
+            logging.info(
+                f"No matches in DB for league_ids={league_ids}; already checked for matches today"
+            )
             return
-        logging.info("No matches found in the DB, fetching from the API for first time")
+        logging.info(
+            f"No matches found in the DB for league_ids={league_ids}; fetching from the API for first time"
+        )
         todays_matches = get_matches_from_api(league_ids, season, date)
         supabase_client.table("matches").upsert(todays_matches).execute()
         # Log that we checked for matches today
         supabase_client.table("match_checks").insert(match_check_string).execute()
         return
-    # Check if there are ongoing matches
     shown_matches = [match for match in matches_in_db if match["show"]]
     ongoing_matches = []
     for match in shown_matches:
@@ -123,6 +138,7 @@ def update_match_data(
     if not ongoing_matches:
         logging.info("No ongoing matches found")
         return
+    logging.info(f"Ongoing matches: {ongoing_matches}")
     ongoing_match_league_ids = list(
         set(
             [
@@ -133,14 +149,10 @@ def update_match_data(
         )
     )
     # If there are ongoing matches, update the fixtures
-    logging.info("Updating fixtures")
-    date_from_midnight = datetime.datetime(
-        date.year, date.month, date.day, 0, 0, 0, tzinfo=datetime.UTC
-    )
-    todays_matches = get_matches_from_api(
-        ongoing_match_league_ids, season, date_from_midnight
-    )
+    logging.info(f"Updating fixtures for league_ids: {ongoing_match_league_ids}")
+    todays_matches = get_matches_from_api(ongoing_match_league_ids, season, date)
     updated_data = []
+    # The API will return all matches, even the ones we don't want to show, show is set to False by default, so we need to update the show field for the matches we want to show
     for match in todays_matches:
         match_in_db = next(
             match_in_db

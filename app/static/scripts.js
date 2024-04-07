@@ -1,11 +1,15 @@
 const getMatches = async () => {
-  const response = await fetch("/matches");
+  const response = await fetch("/matches", {
+    headers: { "Cache-Control": "no-cache" },
+  });
   const data = await response.json();
   return data;
 };
 
 const getUserBets = async () => {
-  const response = await fetch("/bets");
+  const response = await fetch("/bets", {
+    headers: { "Cache-Control": "no-cache" },
+  });
   const data = await response.json();
   return data;
 };
