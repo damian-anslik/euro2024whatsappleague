@@ -84,6 +84,11 @@ def get_matches_for_given_date(
         .execute()
         .data
     )
+    response_data = sorted(
+        response_data,
+        key=lambda x: x["status"] not in finished_match_statuses,
+        reverse=True,
+    )
     ongoing_or_finished_matches = [
         match["id"] for match in response_data if not match["can_users_place_bets"]
     ]
