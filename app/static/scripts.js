@@ -11,6 +11,9 @@ const getUserBets = async () => {
 };
 
 const renderMatchDetails = (matchData, userMatchBet, isToday) => {
+  if (!matchData.show) {
+    return;
+  }
   const createTeamDetailsElement = (teamName, teamLogoUrl) => {
     let teamInfo = document.createElement("div");
     teamInfo.classList.add("team-info");
@@ -164,27 +167,29 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
 document.addEventListener("DOMContentLoaded", async () => {
   let [matches, userBets] = await Promise.all([getMatches(), getUserBets()]);
   let todaysMatches = matches.today;
+  let showTodaysMatches = todaysMatches.filter((match) => match.show);
   let tomorrowsMatches = matches.tomorrow;
-  if (todaysMatches.length === 0) {
+  let showTomorrowsMatches = tomorrowsMatches.filter((match) => match.show);
+  if (showTodaysMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
     noMatches.innerText = "No matches available at the moment";
     let fixtures = document.querySelector(".todays-fixtures");
     fixtures.appendChild(noMatches);
   } else {
-    todaysMatches.forEach((match) => {
+    showTodaysMatches.forEach((match) => {
       let matchBets = userBets.filter((bet) => bet.match_id === match.id);
       renderMatchDetails(match, matchBets, true);
     });
   }
-  if (tomorrowsMatches.length === 0) {
+  if (showTomorrowsMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
     noMatches.innerText = "No matches available at the moment";
     let fixtures = document.querySelector(".tomorrows-fixtures");
     fixtures.appendChild(noMatches);
   } else {
-    tomorrowsMatches.forEach((match) => {
+    showTomorrowsMatches.forEach((match) => {
       let matchBets = userBets.filter((bet) => bet.match_id === match.id);
       renderMatchDetails(match, matchBets, false);
     });

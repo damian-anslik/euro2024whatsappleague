@@ -5,8 +5,6 @@ import datetime
 import requests
 import supabase
 
-from app.models import Match, Bet, BetInDB
-
 supabase_client = supabase.create_client(
     supabase_key=os.getenv("SUPABASE_KEY"),
     supabase_url=os.getenv("SUPABASE_URL"),
@@ -39,6 +37,7 @@ def get_matches_from_api(
         response = requests.get(url, headers=headers, params=querystring)
         response_data = response.json()["response"]
         for fixture in response_data:
+            print(response_data)
             fixture_status = fixture["fixture"]["status"]["short"]
             can_user_place_bet = fixture_status in scheduled_match_statuses
             parsed_fixtures.append(
@@ -59,6 +58,7 @@ def get_matches_from_api(
                     "home_team_goals": fixture["goals"]["home"],
                     "away_team_goals": fixture["goals"]["away"],
                     "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+                    "show": False,
                 }
             )
     return parsed_fixtures
@@ -110,8 +110,9 @@ def update_match_data(
         supabase_client.table("match_checks").insert(match_check_string).execute()
         return
     # Check if there are ongoing matches
+    shown_matches = [match for match in matches_in_db if match["show"]]
     ongoing_matches = []
-    for match in matches_in_db:
+    for match in shown_matches:
         if not (
             datetime.datetime.now(datetime.UTC).timestamp()
             > datetime.datetime.fromisoformat(match["timestamp"]).timestamp()
@@ -139,7 +140,40 @@ def update_match_data(
     todays_matches = get_matches_from_api(
         ongoing_match_league_ids, season, date_from_midnight
     )
-    supabase_client.table("matches").upsert(todays_matches).execute()
+    updated_data = []
+    for match in todays_matches:
+        match_in_db = next(
+            match_in_db
+            for match_in_db in matches_in_db
+            if match_in_db["id"] == match["id"]
+        )
+        match["show"] = match_in_db["show"]
+        updated_data.append(match)
+    supabase_client.table("matches").upsert(updated_data).execute()
+
+
+def calculate_points_for_bet(bet_data: dict, match_data: dict) -> int:
+    # Exact prediction
+    if (
+        bet_data["predicted_home_goals"] == match_data["home_team_goals"]
+        and bet_data["predicted_away_goals"] == match_data["away_team_goals"]
+    ):
+        return 5
+    # Goal difference
+    elif (bet_data["predicted_home_goals"] - bet_data["predicted_away_goals"]) == (
+        match_data["home_team_goals"] - match_data["away_team_goals"]
+    ):
+        return 3
+    # Predicted the winner
+    elif (
+        (bet_data["predicted_home_goals"] > bet_data["predicted_away_goals"])
+        and (match_data["home_team_goals"] > match_data["away_team_goals"])
+    ) or (
+        (bet_data["predicted_home_goals"] < bet_data["predicted_away_goals"])
+        and (match_data["home_team_goals"] < match_data["away_team_goals"])
+    ):
+        return 1
+    return 0
 
 
 def get_current_standings() -> list[dict]:
@@ -152,58 +186,17 @@ def get_current_standings() -> list[dict]:
     standings = []
     for user in users:
         user_bets = [bet for bet in bets if bet["user_id"] == user["id"]]
-        potential_points = 0
         user_points = 0
+        potential_points = 0
         for bet in user_bets:
             fixture = next(
                 fixture for fixture in matches if fixture["id"] == bet["match_id"]
             )
-            if fixture["status"] in ["FT", "AET", "PEN"]:
-                # Exact prediction
-                if (
-                    bet["predicted_home_goals"] == fixture["home_team_goals"]
-                    and bet["predicted_away_goals"] == fixture["away_team_goals"]
-                ):
-                    user_points += 5
-                # Goal difference
-                elif (bet["predicted_home_goals"] - bet["predicted_away_goals"]) == (
-                    fixture["home_team_goals"] - fixture["away_team_goals"]
-                ):
-                    user_points += 3
-                # Predicted the winner
-                elif (
-                    (bet["predicted_home_goals"] > bet["predicted_away_goals"])
-                    and (fixture["home_team_goals"] > fixture["away_team_goals"])
-                ) or (
-                    (bet["predicted_home_goals"] < bet["predicted_away_goals"])
-                    and (fixture["home_team_goals"] < fixture["away_team_goals"])
-                ):
-                    user_points += 1
-                else:
-                    user_points += 0
+            if fixture["status"] in finished_match_statuses:
+                user_points += calculate_points_for_bet(bet, fixture)
             # If the fixture is ongoing, calculate the potential points the user can earn
             if bet["match_id"] in ongoing_matches:
-                if (
-                    bet["predicted_home_goals"] == fixture["home_team_goals"]
-                    and bet["predicted_away_goals"] == fixture["away_team_goals"]
-                ):
-                    potential_points += 5
-                # Goal difference
-                elif (bet["predicted_home_goals"] - bet["predicted_away_goals"]) == (
-                    fixture["home_team_goals"] - fixture["away_team_goals"]
-                ):
-                    potential_points += 3
-                # Predicted the winner
-                elif (
-                    (bet["predicted_home_goals"] > bet["predicted_away_goals"])
-                    and (fixture["home_team_goals"] > fixture["away_team_goals"])
-                ) or (
-                    (bet["predicted_home_goals"] < bet["predicted_away_goals"])
-                    and (fixture["home_team_goals"] < fixture["away_team_goals"])
-                ):
-                    potential_points += 1
-                else:
-                    potential_points += 0
+                potential_points += calculate_points_for_bet(bet, fixture)
         standings.append(
             {
                 "user_id": user["id"],
@@ -249,12 +242,13 @@ def create_user_match_prediction(
         raise ValueError("User cannot place a bet on this fixture")
     # It's possible that the user is trying to place a bet on a fixture that has already started but the fixtures were not updated
     # In this case check the timestamp of the fixture and update the fixtures if necessary
-    if (
+    has_match_potentially_started = (
         datetime.datetime.now(datetime.UTC).timestamp()
         > datetime.datetime.fromisoformat(match_data["timestamp"]).timestamp()
-    ):
+    )
+    if has_match_potentially_started:
         logging.info(
-            "User is trying to place a bet on an ongoing match, updating fixtures"
+            "User is trying to place a bet on a what may be an ongoing match, updating fixtures"
         )
         todays_date = datetime.datetime.now(datetime.UTC).today()
         match_date = datetime.datetime(
@@ -271,12 +265,12 @@ def create_user_match_prediction(
             predicted_home_goals=predicted_home_goals,
             predicted_away_goals=predicted_away_goals,
         )
-    bet = Bet(
-        user_id=user_id,
-        match_id=match_id,
-        predicted_home_goals=predicted_home_goals,
-        predicted_away_goals=predicted_away_goals,
-    )
+    bet_data = {
+        "user_id": user_id,
+        "match_id": match_id,
+        "predicted_home_goals": predicted_home_goals,
+        "predicted_away_goals": predicted_away_goals,
+    }
     user_already_made_prediction_for_match = (
         supabase_client.table("bets")
         .select("*")
@@ -286,16 +280,9 @@ def create_user_match_prediction(
         .data
     )
     if user_already_made_prediction_for_match:
-        bet_data = {
-            "id": user_already_made_prediction_for_match[0]["id"],
-            **bet.model_dump(),
-        }
-    else:
-        bet_data = bet.model_dump()
-    bet_in_db = BetInDB(
-        **supabase_client.table("bets").upsert(bet_data).execute().data[0]
-    )
-    return bet_in_db.model_dump()
+        bet_data.update({"id": user_already_made_prediction_for_match[0]["id"]})
+    bet_creation_response = supabase_client.table("bets").upsert(bet_data).execute()
+    return bet_creation_response.data[0]
 
 
 def get_user_bets(user_id: int) -> list[dict]:
