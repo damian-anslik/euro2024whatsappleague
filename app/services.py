@@ -85,10 +85,7 @@ def get_matches_for_given_date(
         .data
     )
     ongoing_or_finished_matches = [
-        match["id"]
-        for match in response_data
-        if match["status"] in [*ongoing_match_statuses, *finished_match_statuses]
-        and match["show"]
+        match["id"] for match in response_data if not match["can_users_place_bets"]
     ]
     if ongoing_or_finished_matches:
         # Get the list of bets for the ongoing matches
@@ -102,6 +99,7 @@ def get_matches_for_given_date(
         # Add the bets on the ongoing matches to the response data)
         for match in response_data:
             match_bets = [bet for bet in bets if bet["match_id"] == match["id"]]
+            match_bets.sort(key=lambda x: x["user"]["name"])
             match["bets"] = match_bets
     return response_data
 
