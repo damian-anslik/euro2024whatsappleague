@@ -15,7 +15,10 @@ matches_table = supabase_client.table("matches")
 scheduled_match_statuses = ["NS", "TBD"]
 regular_time_match_statuses = ["1H", "HT", "2H"]
 extra_time_match_statuses = ["ET", "BT", "P", "INT"]
-ongoing_match_statuses = regular_time_match_statuses + extra_time_match_statuses
+special_match_statuses = ["INT"]
+ongoing_match_statuses = (
+    regular_time_match_statuses + extra_time_match_statuses + special_match_statuses
+)
 finished_in_regular_time_match_statuses = ["FT"]
 finished_in_extra_time_match_statuses = ["AET", "PEN"]
 finished_match_statuses = (
@@ -46,9 +49,17 @@ def get_matches_from_api(
         response = requests.get(url, headers=headers, params=querystring)
         response_data = response.json()["response"]
         for fixture in response_data:
-            fixture_status = fixture["fixture"]["status"]["short"]
             can_user_place_bet = fixture_status in scheduled_match_statuses
-            if fixture_status in (
+            fixture_status = fixture["fixture"]["status"]["short"]
+            if fixture_status in special_match_statuses:
+                if fixture["score"]["fulltime"]["home"] is None:
+                    # Special status and match has either not started or is in regular time
+                    home_team_goals = fixture["goals"]["home"]
+                    away_team_goals = fixture["goals"]["away"]
+                else:
+                    home_team_goals = fixture["score"]["fulltime"]["home"]
+                    away_team_goals = fixture["score"]["fulltime"]["away"]
+            elif fixture_status in (
                 extra_time_match_statuses + finished_in_extra_time_match_statuses
             ):
                 home_team_goals = fixture["score"]["fulltime"]["home"]

@@ -79,6 +79,18 @@ form {
   border: 1px solid #ccc;
 }
 
+.fixture-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.score-note {
+  font-size: 0.5rem;
+  color: #666;
+}
+
 .teams-info {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

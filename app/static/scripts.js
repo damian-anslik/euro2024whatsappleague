@@ -31,7 +31,7 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     return teamInfo;
   };
 
-  const createDividerElement = (homeTeamScore, awayTeamScore) => {
+  const createDividerElement = (homeTeamScore, awayTeamScore, matchStatus) => {
     if (homeTeamScore === null || awayTeamScore === null) {
       let divider = document.createElement("div");
       divider.innerText = "VS";
@@ -40,15 +40,25 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     }
     let divider = document.createElement("div");
     divider.classList.add("fixture-scores");
+    let scoreDiv = document.createElement("div");
+    scoreDiv.classList.add("score");
     let homeTeamScoreElement = document.createElement("span");
     homeTeamScoreElement.innerText = homeTeamScore;
     let awayTeamScoreElement = document.createElement("span");
     awayTeamScoreElement.innerText = awayTeamScore;
     let dash = document.createElement("span");
     dash.innerText = " - ";
-    divider.appendChild(homeTeamScoreElement);
-    divider.appendChild(dash);
-    divider.appendChild(awayTeamScoreElement);
+    scoreDiv.appendChild(homeTeamScoreElement);
+    scoreDiv.appendChild(dash);
+    scoreDiv.appendChild(awayTeamScoreElement);
+    divider.appendChild(scoreDiv);
+    // Add a note stating that score displayed is for regular time only
+    if (matchStatus in { ET: 1, BT: 1, P: 1, AET: 1, PEN: 1 }) {
+      let extraTime = document.createElement("span");
+      extraTime.innerText = "End of regular time";
+      extraTime.classList.add("score-note");
+      divider.appendChild(extraTime);
+    }
     return divider;
   };
 
@@ -153,6 +163,7 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
   fixtureTime.classList.add("fixture-time");
   let timestamp = new Date(matchData.timestamp).getTime();
   fixtureTime.innerText = {
+    TBD: "Time To Be Decided",
     NS:
       (isToday ? "Today " : "Tomorrow ") +
       new Date(timestamp).toLocaleString("en-GB", {
@@ -163,7 +174,12 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     HT: "Half Time",
     "2H": "Second Half",
     ET: "Extra Time",
+    BT: "Break Time (Extra Time)",
+    P: "Penalties",
+    INT: "Match Interrupted",
     FT: "Full Time",
+    AET: "Ended After Extra Time",
+    PEN: "Ended After Penalties",
   }[matchData.status];
   // Render teams
   let teamsInfo = document.createElement("div");
@@ -179,7 +195,8 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
   );
   let teamDivider = createDividerElement(
     matchData.home_team_goals,
-    matchData.away_team_goals
+    matchData.away_team_goals,
+    matchData.status
   );
   teamsInfo.appendChild(homeTeamInfo);
   teamsInfo.appendChild(teamDivider);
