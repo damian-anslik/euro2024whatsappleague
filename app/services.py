@@ -37,6 +37,7 @@ def get_matches_from_api(
         response = requests.get(url, headers=headers, params=querystring)
         response_data = response.json()["response"]
         for fixture in response_data:
+            print(response_data)
             fixture_status = fixture["fixture"]["status"]["short"]
             can_user_place_bet = fixture_status in scheduled_match_statuses
             parsed_fixtures.append(
@@ -57,6 +58,7 @@ def get_matches_from_api(
                     "home_team_goals": fixture["goals"]["home"],
                     "away_team_goals": fixture["goals"]["away"],
                     "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+                    "show": False,
                 }
             )
     return parsed_fixtures
@@ -108,8 +110,9 @@ def update_match_data(
         supabase_client.table("match_checks").insert(match_check_string).execute()
         return
     # Check if there are ongoing matches
+    shown_matches = [match for match in matches_in_db if match["show"]]
     ongoing_matches = []
-    for match in matches_in_db:
+    for match in shown_matches:
         if not (
             datetime.datetime.now(datetime.UTC).timestamp()
             > datetime.datetime.fromisoformat(match["timestamp"]).timestamp()
@@ -137,7 +140,16 @@ def update_match_data(
     todays_matches = get_matches_from_api(
         ongoing_match_league_ids, season, date_from_midnight
     )
-    supabase_client.table("matches").upsert(todays_matches).execute()
+    updated_data = []
+    for match in todays_matches:
+        match_in_db = next(
+            match_in_db
+            for match_in_db in matches_in_db
+            if match_in_db["id"] == match["id"]
+        )
+        match["show"] = match_in_db["show"]
+        updated_data.append(match)
+    supabase_client.table("matches").upsert(updated_data).execute()
 
 
 def calculate_points_for_bet(bet_data: dict, match_data: dict) -> int:
