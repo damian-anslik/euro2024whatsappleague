@@ -224,3 +224,17 @@ tr#3 > * {
     transform: rotate(360deg);
   }
 }
+
+.show-bets-button {
+  margin-top: 0.5rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.bets-info {
+  margin-top: 0.5rem;
+}
