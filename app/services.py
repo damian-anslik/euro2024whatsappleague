@@ -81,6 +81,7 @@ def get_matches_for_given_date(
         .select("*")
         .gt("timestamp", start_of_day.isoformat())
         .lt("timestamp", end_of_day.isoformat())
+        .order("timestamp")
         .execute()
         .data
     )
@@ -125,6 +126,7 @@ def update_match_data(
         # Log that we checked for matches today
         supabase_client.table("match_checks").insert(match_check_string).execute()
         return
+    # Only update matches that are shown and are ongoing
     shown_matches = [match for match in matches_in_db if match["show"]]
     ongoing_matches = []
     for match in shown_matches:
