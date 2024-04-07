@@ -107,8 +107,10 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     fixtureId.value = matchId;
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      submit.disabled = true;
       errorContainer.style.display = "none";
       successContainer.style.display = "none";
+      submit.innerText = "Submitting Prediction...";
       fetch("/bets", {
         method: "POST",
         body: new FormData(form),
@@ -116,7 +118,7 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
         .then((response) => {
           if (response.status === 500) {
             throw new Error(
-              "Submitting predictions are now closed for this match. Reloading the page..."
+              "You can no longer submit predictions for this match. Please refresh the page to see the latest scores."
             );
           }
           return response.json();
@@ -125,13 +127,11 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
           successContainer.innerText = "Prediction Submitted Successfully";
           successContainer.style.display = "block";
           submit.innerText = "Update Prediction";
+          submit.disabled = false;
         })
         .catch((error) => {
           errorContainer.style.display = "block";
           errorContainer.innerText = error.message;
-          setTimeout(() => {
-            window.location.reload();
-          }, 3000);
         });
     });
     form.appendChild(homeTeamBet);

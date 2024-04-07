@@ -13,8 +13,14 @@ supabase_client = supabase.create_client(
 bets_table = supabase_client.table("bets")
 matches_table = supabase_client.table("matches")
 scheduled_match_statuses = ["NS", "TBD"]
-ongoing_match_statuses = ["1H", "HT", "2H", "ET", "BT", "P", "INT"]
-finished_match_statuses = ["FT", "AET", "PEN"]
+regular_time_match_statuses = ["1H", "HT", "2H"]
+extra_time_match_statuses = ["ET", "BT", "P", "INT"]
+ongoing_match_statuses = regular_time_match_statuses + extra_time_match_statuses
+finished_in_regular_time_match_statuses = ["FT"]
+finished_in_extra_time_match_statuses = ["AET", "PEN"]
+finished_match_statuses = (
+    finished_in_regular_time_match_statuses + finished_in_extra_time_match_statuses
+)
 
 
 def get_matches_from_api(
@@ -42,6 +48,14 @@ def get_matches_from_api(
         for fixture in response_data:
             fixture_status = fixture["fixture"]["status"]["short"]
             can_user_place_bet = fixture_status in scheduled_match_statuses
+            if fixture_status in (
+                extra_time_match_statuses + finished_in_extra_time_match_statuses
+            ):
+                home_team_goals = fixture["score"]["fulltime"]["home"]
+                away_team_goals = fixture["score"]["fulltime"]["away"]
+            else:
+                home_team_goals = fixture["goals"]["home"]
+                away_team_goals = fixture["goals"]["away"]
             parsed_fixtures.append(
                 {
                     "id": fixture["fixture"]["id"],
@@ -57,8 +71,8 @@ def get_matches_from_api(
                     "away_team_name": fixture["teams"]["away"]["name"],
                     "home_team_logo": fixture["teams"]["home"]["logo"],
                     "away_team_logo": fixture["teams"]["away"]["logo"],
-                    "home_team_goals": fixture["goals"]["home"],
-                    "away_team_goals": fixture["goals"]["away"],
+                    "home_team_goals": home_team_goals,
+                    "away_team_goals": away_team_goals,
                     "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
                     "show": False,
                 }
@@ -310,6 +324,7 @@ def create_user_match_prediction(
         "match_id": match_id,
         "predicted_home_goals": predicted_home_goals,
         "predicted_away_goals": predicted_away_goals,
+        "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
     }
     user_already_made_prediction_for_match = (
         supabase_client.table("bets")
@@ -320,6 +335,14 @@ def create_user_match_prediction(
         .data
     )
     if user_already_made_prediction_for_match:
+        predicted_scores_are_the_same = (
+            user_already_made_prediction_for_match[0]["predicted_home_goals"]
+            == predicted_home_goals
+            and user_already_made_prediction_for_match[0]["predicted_away_goals"]
+            == predicted_away_goals
+        )
+        if predicted_scores_are_the_same:
+            return user_already_made_prediction_for_match[0]
         bet_data.update({"id": user_already_made_prediction_for_match[0]["id"]})
     bet_creation_response = supabase_client.table("bets").upsert(bet_data).execute()
     return bet_creation_response.data[0]
