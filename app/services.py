@@ -49,8 +49,8 @@ def get_matches_from_api(
         response = requests.get(url, headers=headers, params=querystring)
         response_data = response.json()["response"]
         for fixture in response_data:
-            can_user_place_bet = fixture_status in scheduled_match_statuses
             fixture_status = fixture["fixture"]["status"]["short"]
+            can_user_place_bet = fixture_status in scheduled_match_statuses
             if fixture_status in special_match_statuses:
                 if fixture["score"]["fulltime"]["home"] is None:
                     # Special status and match has either not started or is in regular time
