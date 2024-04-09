@@ -271,7 +271,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   let todaysShownMatches = todaysMatches.filter((match) => match.show);
   let tomorrowsMatches = matches.tomorrow;
   let tomorrowsShownMatches = tomorrowsMatches.filter((match) => match.show);
-  console.log(tomorrowsShownMatches);
   if (todaysShownMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
@@ -284,7 +283,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderMatchDetails(match, matchBets, true);
     });
   }
-  console.log(tomorrowsShownMatches.length);
   if (tomorrowsShownMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");

@@ -27,7 +27,7 @@ finished_match_statuses = (
 
 
 def get_matches_from_api(
-    league_ids: list[str],
+    league_id: str,
     season: str,
     date: datetime.datetime,
 ) -> list[dict]:
@@ -37,57 +37,56 @@ def get_matches_from_api(
         "X-RapidAPI-Host": os.getenv("RAPIDAPI_BASE_URL"),
     }
     parsed_fixtures = []
-    for league_id in league_ids:
-        querystring = {
-            "date": datetime.datetime(date.year, date.month, date.day).strftime(
-                "%Y-%m-%d"
-            ),
-            "league": league_id,
-            "season": season,
-        }
-        logging.info(f"Fetching fixtures for league_id: {league_id}")
-        response = requests.get(url, headers=headers, params=querystring)
-        response_data = response.json()["response"]
-        for fixture in response_data:
-            fixture_status = fixture["fixture"]["status"]["short"]
-            can_user_place_bet = fixture_status in scheduled_match_statuses
-            if fixture_status in special_match_statuses:
-                if fixture["score"]["fulltime"]["home"] is None:
-                    # Special status and match has either not started or is in regular time
-                    home_team_goals = fixture["goals"]["home"]
-                    away_team_goals = fixture["goals"]["away"]
-                else:
-                    home_team_goals = fixture["score"]["fulltime"]["home"]
-                    away_team_goals = fixture["score"]["fulltime"]["away"]
-            elif fixture_status in (
-                extra_time_match_statuses + finished_in_extra_time_match_statuses
-            ):
-                home_team_goals = fixture["score"]["fulltime"]["home"]
-                away_team_goals = fixture["score"]["fulltime"]["away"]
-            else:
+    querystring = {
+        "date": datetime.datetime(date.year, date.month, date.day).strftime("%Y-%m-%d"),
+        "league": league_id,
+        "season": season,
+    }
+    logging.info(
+        f"Fetching fixtures for league_id: {league_id}, season: {season}, and date: {date}"
+    )
+    response = requests.get(url, headers=headers, params=querystring)
+    response_data = response.json()["response"]
+    for fixture in response_data:
+        fixture_status = fixture["fixture"]["status"]["short"]
+        can_user_place_bet = fixture_status in scheduled_match_statuses
+        if fixture_status in special_match_statuses:
+            if fixture["score"]["fulltime"]["home"] is None:
+                # Special status and match has either not started or is in regular time
                 home_team_goals = fixture["goals"]["home"]
                 away_team_goals = fixture["goals"]["away"]
-            parsed_fixtures.append(
-                {
-                    "id": fixture["fixture"]["id"],
-                    "timestamp": datetime.datetime.fromtimestamp(
-                        fixture["fixture"]["timestamp"],
-                        datetime.UTC,
-                    ).isoformat(),
-                    "status": fixture_status,
-                    "league_id": league_id,
-                    "season": season,
-                    "can_users_place_bets": can_user_place_bet,
-                    "home_team_name": fixture["teams"]["home"]["name"],
-                    "away_team_name": fixture["teams"]["away"]["name"],
-                    "home_team_logo": fixture["teams"]["home"]["logo"],
-                    "away_team_logo": fixture["teams"]["away"]["logo"],
-                    "home_team_goals": home_team_goals,
-                    "away_team_goals": away_team_goals,
-                    "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
-                    "show": False,
-                }
-            )
+            else:
+                home_team_goals = fixture["score"]["fulltime"]["home"]
+                away_team_goals = fixture["score"]["fulltime"]["away"]
+        elif fixture_status in (
+            extra_time_match_statuses + finished_in_extra_time_match_statuses
+        ):
+            home_team_goals = fixture["score"]["fulltime"]["home"]
+            away_team_goals = fixture["score"]["fulltime"]["away"]
+        else:
+            home_team_goals = fixture["goals"]["home"]
+            away_team_goals = fixture["goals"]["away"]
+        parsed_fixtures.append(
+            {
+                "id": fixture["fixture"]["id"],
+                "timestamp": datetime.datetime.fromtimestamp(
+                    fixture["fixture"]["timestamp"],
+                    datetime.UTC,
+                ).isoformat(),
+                "status": fixture_status,
+                "league_id": league_id,
+                "season": season,
+                "can_users_place_bets": can_user_place_bet,
+                "home_team_name": fixture["teams"]["home"]["name"],
+                "away_team_name": fixture["teams"]["away"]["name"],
+                "home_team_logo": fixture["teams"]["home"]["logo"],
+                "away_team_logo": fixture["teams"]["away"]["logo"],
+                "home_team_goals": home_team_goals,
+                "away_team_goals": away_team_goals,
+                "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+                "show": False,
+            }
+        )
     return parsed_fixtures
 
 
@@ -146,31 +145,63 @@ def did_check_for_matches_today(params: str) -> bool:
 
 
 def update_match_data(
-    league_ids: list[str],
+    league_id: str,
     season: str,
     date: datetime.datetime,
+    show_by_default: bool = False,
+    force_update: bool = False,
 ):
     logging.info(
-        f"Updating match data for date: {date.date().strftime('%Y-%m-%d')}; league_ids: {league_ids}"
+        f"Updating match data for date: {date.date().strftime('%Y-%m-%d')}; league_id: {league_id}"
     )
-    matches_in_db = get_matches_for_given_date(date)
+    start_of_day = datetime.datetime(
+        date.year, date.month, date.day, 0, 0, 0, tzinfo=datetime.UTC
+    )
+    end_of_day = datetime.datetime(
+        date.year, date.month, date.day, 23, 59, 59, tzinfo=datetime.UTC
+    )
+    matches_in_db = (
+        supabase_client.table("matches")
+        .select("*")
+        .eq("league_id", league_id)
+        .eq("season", season)
+        .gt("timestamp", start_of_day.isoformat())
+        .lt("timestamp", end_of_day.isoformat())
+        .order("timestamp")
+        .execute()
+        .data
+    )
     if not matches_in_db:
-        match_check_string = (
-            f"{','.join(league_ids)}-{season}-{date.date().strftime('%Y-%m-%d')}"
+        # Check if we have already checked for matches for the day, if not we will fetch the matches from the API
+        already_checked_for_matches = (
+            supabase_client.table("match_checks")
+            .select("*")
+            .eq("league_id", league_id)
+            .eq("season", season)
+            .eq("date", date.date().strftime("%Y-%m-%d"))
+            .execute()
+            .data
         )
-        # It is possible that there are no matches on a given date, in this case, we should check if we already checked for matches today
-        if did_check_for_matches_today(match_check_string):
+        if already_checked_for_matches and not force_update:
             logging.info(
-                f"No matches in DB for league_ids={league_ids}; already checked for matches today"
+                f"No matches in DB for league_id={league_id} and date={date.date().strftime('%Y-%m-%d')}; already checked for matches today"
             )
             return
         logging.info(
-            f"No matches found in the DB for league_ids={league_ids}; fetching from the API for first time"
+            f"No matches found in the DB for league_id={league_id} and date={date.date().strftime('%Y-%m-%d')}; fetching from the API for first time"
         )
-        todays_matches = get_matches_from_api(league_ids, season, date)
+        todays_matches = get_matches_from_api(league_id, season, date)
+        for match in todays_matches:
+            match["show"] = show_by_default
         supabase_client.table("matches").upsert(todays_matches).execute()
         # Log that we checked for matches today
-        supabase_client.table("match_checks").insert(match_check_string).execute()
+        supabase_client.table("match_checks").insert(
+            {
+                "league_id": league_id,
+                "season": season,
+                "date": date.date().strftime("%Y-%m-%d"),
+            }
+        ).execute()
         return
     # Only update matches that are shown and are ongoing
     shown_matches = [match for match in matches_in_db if match["show"]]
@@ -184,24 +215,12 @@ def update_match_data(
             continue
         ongoing_matches.append(match["id"])
     if not ongoing_matches:
-        logging.info("No ongoing matches found")
+        logging.info(f"No ongoing matches found for league_id={league_id}")
         return
-    logging.info(f"Ongoing matches: {ongoing_matches}")
-    ongoing_match_league_ids = list(
-        set(
-            [
-                match["league_id"]
-                for match in matches_in_db
-                if match["id"] in ongoing_matches
-            ]
-        )
-    )
-    # If there are ongoing matches, update the fixtures
-    logging.info(f"Updating fixtures for league_ids: {ongoing_match_league_ids}")
-    todays_matches = get_matches_from_api(ongoing_match_league_ids, season, date)
+    logging.info(f"Ongoing matches: {ongoing_matches}; updating fixtures")
+    updated_matches = get_matches_from_api(league_id, season, date)
     updated_data = []
-    # The API will return all matches, even the ones we don't want to show, show is set to False by default, so we need to update the show field for the matches we want to show
-    for match in todays_matches:
+    for match in updated_matches:
         match_in_db = next(
             match_in_db
             for match_in_db in matches_in_db
@@ -209,6 +228,7 @@ def update_match_data(
         )
         match["show"] = match_in_db["show"]
         updated_data.append(match)
+    logging.info(f"Updated data for league_id={league_id}: {updated_data}")
     supabase_client.table("matches").upsert(updated_data).execute()
 
 
@@ -269,7 +289,7 @@ def get_current_standings() -> list[dict]:
         )
     # Sort the standings by points and then alphabetically by name
     standings.sort(key=lambda x: x["name"])
-    standings.sort(key=lambda x: x["points"], reverse=True)
+    standings.sort(key=lambda x: x["points"] + x["potential_points"], reverse=True)
     # Rank the standings, take care of ties, for example, if two users have rank 1, the next should be 2
     current_rank = 1
     for i, user in enumerate(standings):

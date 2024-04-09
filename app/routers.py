@@ -1,11 +1,13 @@
 import datetime
 import logging
+import json
 
 from fastapi import APIRouter, Request, Form, status, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 
-from app import services, auth
+from app import services, auth, models
 
 app_router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -21,6 +23,43 @@ def create_session(username: str = Form(...)):
         expires=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365),
     )
     return response
+
+
+@app_router.get("/leagues")
+def get_leagues() -> list[models.League]:
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    return config["leagues"]
+
+
+@app_router.post("/leagues")
+def update_leagues(league: models.League):
+    current_leagues = get_leagues()
+    leagues = []
+    for current_league in current_leagues:
+        if current_league["id"] != league.id:
+            leagues.append(current_league)
+        else:
+            # Update the league
+            leagues.append(league.model_dump())
+            services.update_match_data(
+                league_id=league.id,
+                season=league.season,
+                date=datetime.datetime.now(datetime.UTC).today(),
+                show_by_default=league.show_by_default,
+                force_update=True,
+            )
+            services.update_match_data(
+                league_id=league.id,
+                season=league.season,
+                date=datetime.datetime.now(datetime.UTC).today()
+                + datetime.timedelta(days=1),
+                show_by_default=league.show_by_default,
+                force_update=True,
+            )
+    with open("config.json", "w") as f:
+        json.dump({"leagues": leagues}, f, indent=4)
+    return leagues
 
 
 @app_router.get("/")
