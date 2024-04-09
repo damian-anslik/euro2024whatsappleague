@@ -13,15 +13,16 @@ app_router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 
-@app_router.post("/session")
-def create_session(username: str = Form(...)):
-    session_id = auth.create_user_session(username)
+@app_router.post("/login")
+def login(username: str = Form(...)):
+    session_id = auth.get_user_session(username)
     response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    response.set_cookie(
-        key="session_id",
-        value=session_id,
-        expires=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365),
-    )
+    if session_id:
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            expires=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365),
+        )
     return response
 
 
