@@ -289,7 +289,11 @@ def get_current_standings() -> list[dict]:
         )
     # Sort the standings by points and then alphabetically by name
     standings.sort(key=lambda x: x["name"])
-    standings.sort(key=lambda x: x["points"] + x["potential_points"], reverse=True)
+    standings.sort(
+        key=lambda x: x["points"]
+        + (x["potential_points"] if x["potential_points"] else 0),
+        reverse=True,
+    )
     # Rank the standings, take care of ties, for example, if two users have rank 1, the next should be 2
     current_rank = 1
     for i, user in enumerate(standings):
