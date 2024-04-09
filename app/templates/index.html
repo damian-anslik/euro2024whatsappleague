@@ -45,9 +45,9 @@
 {% else %}
 <div class="create-session-container">
     <h2>Welcome to the Euro 2024 Whatsapp League!</h2>
-    <form action="/session" method="post">
-        <input type="text" id="username" name="username" placeholder="Enter your name">
-        <button type="submit">Continue</button>
+    <form action="/login" method="post" class="login-form">
+        <input type="text" id="username" name="username" placeholder="Enter your name" required>
+        <button type="submit">Login</button>
     </form>
 </div>
 {% endif %}
