@@ -36,28 +36,47 @@ def get_leagues() -> list[models.League]:
 @app_router.post("/leagues")
 def update_leagues(league: models.League):
     current_leagues = get_leagues()
+    current_league_ids = [league["id"] for league in current_leagues]
     leagues = []
-    for current_league in current_leagues:
-        if current_league["id"] != league.id:
-            leagues.append(current_league)
-        else:
-            # Update the league
-            leagues.append(league.model_dump())
-            services.update_match_data(
-                league_id=league.id,
-                season=league.season,
-                date=datetime.datetime.now(datetime.UTC).today(),
-                show_by_default=league.show_by_default,
-                force_update=True,
-            )
-            services.update_match_data(
-                league_id=league.id,
-                season=league.season,
-                date=datetime.datetime.now(datetime.UTC).today()
-                + datetime.timedelta(days=1),
-                show_by_default=league.show_by_default,
-                force_update=True,
-            )
+    if league.id in current_league_ids:
+        for current_league in current_leagues:
+            if current_league["id"] != league.id:
+                leagues.append(current_league)
+            else:
+                leagues.append(league.model_dump())
+                services.update_match_data(
+                    league_id=league.id,
+                    season=league.season,
+                    date=datetime.datetime.now(datetime.UTC).today(),
+                    show_by_default=league.show_by_default,
+                    force_update=True,
+                )
+                services.update_match_data(
+                    league_id=league.id,
+                    season=league.season,
+                    date=datetime.datetime.now(datetime.UTC).today()
+                    + datetime.timedelta(days=1),
+                    show_by_default=league.show_by_default,
+                    force_update=True,
+                )
+    else:
+        current_leagues.append(league)
+        services.update_match_data(
+            league_id=league.id,
+            season=league.season,
+            date=datetime.datetime.now(datetime.UTC).today(),
+            show_by_default=league.show_by_default,
+            force_update=True,
+        )
+        services.update_match_data(
+            league_id=league.id,
+            season=league.season,
+            date=datetime.datetime.now(datetime.UTC).today()
+            + datetime.timedelta(days=1),
+            show_by_default=league.show_by_default,
+            force_update=True,
+        )
+        leagues = current_leagues
     with open("config.json", "w") as f:
         json.dump({"leagues": leagues}, f, indent=4)
     return leagues
