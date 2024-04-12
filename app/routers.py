@@ -60,7 +60,7 @@ def update_leagues(league: models.League):
                     force_update=True,
                 )
     else:
-        current_leagues.append(league)
+        current_leagues.append(league.model_dump())
         services.update_match_data(
             league_id=league.id,
             season=league.season,
