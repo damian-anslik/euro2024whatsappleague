@@ -257,12 +257,26 @@ def calculate_points_for_bet(bet_data: dict, match_data: dict) -> int:
 
 
 def get_current_standings() -> list[dict]:
-    matches = supabase_client.table("matches").select("*").execute().data
+    matches = (
+        supabase_client.table("matches")
+        .select("*")
+        .eq("show", True)
+        .order("timestamp")
+        .execute()
+        .data
+    )
+    SHOW_LAST_N_FINISHED_MATCHES = 5
+    last_n_finished_matches = [
+        match for match in matches if match["status"] in finished_match_statuses
+    ][-SHOW_LAST_N_FINISHED_MATCHES:]
     ongoing_matches = [
         match["id"] for match in matches if match["status"] in ongoing_match_statuses
     ]
     users = supabase_client.table("sessions").select("*").execute().data
     bets = supabase_client.table("bets").select("*").execute().data
+    bets = [
+        bet for bet in bets if bet["match_id"] in [match["id"] for match in matches]
+    ]
     standings = []
     for user in users:
         user_bets = [bet for bet in bets if bet["user_id"] == user["id"]]
@@ -277,6 +291,17 @@ def get_current_standings() -> list[dict]:
             # If the fixture is ongoing, calculate the potential points the user can earn
             if bet["match_id"] in ongoing_matches:
                 potential_points += calculate_points_for_bet(bet, fixture)
+        points_in_last_n_finished_matches = []
+        for match in last_n_finished_matches:
+            bet = next(
+                (bet for bet in user_bets if bet["match_id"] == match["id"]), None
+            )
+            if bet:
+                points_in_last_n_finished_matches.append(
+                    calculate_points_for_bet(bet, match)
+                )
+            else:
+                points_in_last_n_finished_matches.append(None)
         standings.append(
             {
                 "user_id": user["id"],
@@ -285,6 +310,7 @@ def get_current_standings() -> list[dict]:
                 "potential_points": (
                     potential_points if len(ongoing_matches) != 0 else None
                 ),
+                "points_in_last_n_finished_matches": points_in_last_n_finished_matches,
             }
         )
     # Sort the standings by points and then alphabetically by name

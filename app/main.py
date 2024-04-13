@@ -48,7 +48,7 @@ def configure_scheduler():
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
-configure_scheduler()
+# configure_scheduler()
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(app_router)
