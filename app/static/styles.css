@@ -213,6 +213,7 @@ table {
   border-radius: 0.5rem;
   font-size: 0.8rem;
   overflow-y: auto;
+  overflow-x: scroll;
 }
 
 th,
@@ -242,6 +243,7 @@ thead th:last-child {
   border-collapse: collapse;
   border-style: hidden; /* hide standard table (collapsed) border */
   box-shadow: 0 0 0 1px #007bff;
+  overflow-x: scroll;
 }
 
 .standings table {
@@ -284,4 +286,53 @@ thead th:last-child {
   display: none;
   border-radius: 0.25rem;
   padding: 0.5rem;
+}
+
+.last-5-matches {
+  /* Don't break when overflowing, scroll instead */
+  overflow-x: auto;
+  /* display: flex; */
+  gap: 0.5rem;
+}
+
+.last-5-matches-points-5 {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  background-color: #28a745;
+  user-select: none;
+  text-align: center;
+}
+.last-5-matches-points-3 {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  background-color: #ffc107;
+  user-select: none;
+  text-align: center;
+}
+.last-5-matches-points-1 {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  background-color: #007bff;
+  user-select: none;
+  text-align: center;
+}
+
+.last-5-matches-points-0 {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  background-color: #dc3545;
+  user-select: none;
+  text-align: center;
 }

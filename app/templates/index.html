@@ -13,6 +13,7 @@
                     <th>Position</th>
                     <th>Name</th>
                     <th>Points</th>
+                    <!-- <th>Last 5 Matches</th> -->
                 </tr>
             </thead>
             <tbody>
@@ -26,6 +27,12 @@
                         (+{{ user.potential_points}})
                         {% endif %}
                     </td>
+                    <!-- <td class="last-5-matches">
+                        {% for points in user.points_in_last_n_finished_matches %}
+                        <span class="last-5-matches-points-{{points if points else 0}}">{{points if points
+                            else 0}}</span>
+                        {% endfor %}
+                    </td> -->
                 </tr>
                 {% endfor %}
             </tbody>

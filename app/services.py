@@ -257,12 +257,26 @@ def calculate_points_for_bet(bet_data: dict, match_data: dict) -> int:
 
 
 def get_current_standings() -> list[dict]:
-    matches = supabase_client.table("matches").select("*").execute().data
+    matches = (
+        supabase_client.table("matches")
+        .select("*")
+        .eq("show", True)
+        .order("timestamp")
+        .execute()
+        .data
+    )
+    SHOW_LAST_N_FINISHED_MATCHES = 5
+    last_n_finished_matches = [
+        match for match in matches if match["status"] in finished_match_statuses
+    ][-SHOW_LAST_N_FINISHED_MATCHES:]
     ongoing_matches = [
         match["id"] for match in matches if match["status"] in ongoing_match_statuses
     ]
     users = supabase_client.table("sessions").select("*").execute().data
     bets = supabase_client.table("bets").select("*").execute().data
+    bets = [
+        bet for bet in bets if bet["match_id"] in [match["id"] for match in matches]
+    ]
     standings = []
     for user in users:
         user_bets = [bet for bet in bets if bet["user_id"] == user["id"]]
@@ -277,6 +291,17 @@ def get_current_standings() -> list[dict]:
             # If the fixture is ongoing, calculate the potential points the user can earn
             if bet["match_id"] in ongoing_matches:
                 potential_points += calculate_points_for_bet(bet, fixture)
+        points_in_last_n_finished_matches = []
+        for match in last_n_finished_matches:
+            bet = next(
+                (bet for bet in user_bets if bet["match_id"] == match["id"]), None
+            )
+            if bet:
+                points_in_last_n_finished_matches.append(
+                    calculate_points_for_bet(bet, match)
+                )
+            else:
+                points_in_last_n_finished_matches.append(None)
         standings.append(
             {
                 "user_id": user["id"],
@@ -285,6 +310,7 @@ def get_current_standings() -> list[dict]:
                 "potential_points": (
                     potential_points if len(ongoing_matches) != 0 else None
                 ),
+                "points_in_last_n_finished_matches": points_in_last_n_finished_matches,
             }
         )
     # Sort the standings by points and then alphabetically by name
@@ -324,7 +350,6 @@ def create_user_match_prediction(
     match_id: str,
     predicted_home_goals: int,
     predicted_away_goals: int,
-    # num_requests: int = 1,
 ) -> dict:
     match_data = (
         supabase_client.table("matches")
@@ -335,6 +360,17 @@ def create_user_match_prediction(
     )
     if not match_data["can_users_place_bets"]:
         raise ValueError("User cannot place a bet on this fixture")
+    # Check if there is less than 5 minutes left for the match to start
+    if (
+        datetime.datetime.now(datetime.UTC).timestamp()
+        - datetime.datetime.fromisoformat(match_data["timestamp"]).timestamp()
+        > 5 * 60
+    ):
+        match_data["can_users_place_bets"] = False
+        supabase_client.table("matches").upsert([match_data]).execute()
+        raise ValueError(
+            "Match about to start - user cannot place a bet on this fixture"
+        )
     bet_data = {
         "user_id": user_id,
         "match_id": match_id,
@@ -369,3 +405,32 @@ def get_user_bets(user_id: int) -> list[dict]:
         supabase_client.table("bets").select("*").eq("user_id", user_id).execute()
     )
     return user_bets.data
+
+
+def scheduled_update_function(date: datetime.datetime):
+    leagues = supabase_client.table("leagues").select("*").execute().data
+    for league in leagues:
+        try:
+            update_match_data(
+                str(league["id"]), league["season"], date, league["show_by_default"]
+            )
+        except Exception as e:
+            logging.error(f"Error updating data for league {league['id']}: {e}")
+
+
+def get_currently_tracked_leagues() -> list[dict]:
+    leagues = supabase_client.table("leagues").select("*").execute().data
+    return leagues
+
+
+def update_tracked_leagues(
+    league_id: int, season: str, league_name: str, show: bool
+) -> dict:
+    league_data = {
+        "id": league_id,
+        "name": league_name,
+        "season": season,
+        "show_by_default": show,
+    }
+    response = supabase_client.table("leagues").upsert(league_data).execute()
+    return response.data[0]
