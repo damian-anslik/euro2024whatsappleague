@@ -350,7 +350,6 @@ def create_user_match_prediction(
     match_id: str,
     predicted_home_goals: int,
     predicted_away_goals: int,
-    # num_requests: int = 1,
 ) -> dict:
     match_data = (
         supabase_client.table("matches")
@@ -361,6 +360,17 @@ def create_user_match_prediction(
     )
     if not match_data["can_users_place_bets"]:
         raise ValueError("User cannot place a bet on this fixture")
+    # Check if there is less than 5 minutes left for the match to start
+    if (
+        datetime.datetime.now(datetime.UTC).timestamp()
+        - datetime.datetime.fromisoformat(match_data["timestamp"]).timestamp()
+        > 5 * 60
+    ):
+        match_data["can_users_place_bets"] = False
+        supabase_client.table("matches").upsert([match_data]).execute()
+        raise ValueError(
+            "Match about to start - user cannot place a bet on this fixture"
+        )
     bet_data = {
         "user_id": user_id,
         "match_id": match_id,
@@ -395,3 +405,32 @@ def get_user_bets(user_id: int) -> list[dict]:
         supabase_client.table("bets").select("*").eq("user_id", user_id).execute()
     )
     return user_bets.data
+
+
+def scheduled_update_function(date: datetime.datetime):
+    leagues = supabase_client.table("leagues").select("*").execute().data
+    for league in leagues:
+        try:
+            update_match_data(
+                str(league["id"]), league["season"], date, league["show_by_default"]
+            )
+        except Exception as e:
+            logging.error(f"Error updating data for league {league['id']}: {e}")
+
+
+def get_currently_tracked_leagues() -> list[dict]:
+    leagues = supabase_client.table("leagues").select("*").execute().data
+    return leagues
+
+
+def update_tracked_leagues(
+    league_id: int, season: str, league_name: str, show: bool
+) -> dict:
+    league_data = {
+        "id": league_id,
+        "name": league_name,
+        "season": season,
+        "show_by_default": show,
+    }
+    response = supabase_client.table("leagues").upsert(league_data).execute()
+    return response.data[0]
