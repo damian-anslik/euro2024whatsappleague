@@ -18,6 +18,7 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
   if (!matchData.show) {
     return;
   }
+  console.log(matchData);
   const createTeamDetailsElement = (teamName, teamLogoUrl) => {
     let teamInfo = document.createElement("div");
     teamInfo.classList.add("team-info");
@@ -159,6 +160,12 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
   } else if (isOngoingMatch) {
     fixtureInfo.classList.add("ongoing");
   }
+  let leagueName = document.createElement("span");
+  leagueName.classList.add("league-name");
+  leagueName.innerText = matchData.league_name;
+  if (matchData.league_name) {
+    fixtureInfo.appendChild(leagueName);
+  }
   let fixtureTime = document.createElement("span");
   fixtureTime.classList.add("fixture-time");
   let timestamp = new Date(matchData.timestamp).getTime();
@@ -274,7 +281,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (todaysShownMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
-    noMatches.innerText = "No matches available at the moment";
+    noMatches.innerText = "No upcoming matches";
     let fixtures = document.querySelector(".todays-fixtures");
     fixtures.appendChild(noMatches);
   } else {
@@ -286,7 +293,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (tomorrowsShownMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
-    noMatches.innerText = "No matches available at the moment";
+    noMatches.innerText = "No upcoming matches";
     let fixtures = document.querySelector(".tomorrows-fixtures");
     fixtures.appendChild(noMatches);
   } else {

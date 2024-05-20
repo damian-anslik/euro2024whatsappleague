@@ -163,10 +163,12 @@ form {
   padding: 1rem;
 }
 
-.fixture-time {
+.fixture-time,
+.league-name {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding-block: 0.5rem;
 }
 
 .loading-indicator-container {
@@ -204,39 +206,6 @@ form {
   }
 }
 
-/* Tables */
-
-table {
-  border-collapse: collapse;
-  width: 100%;
-  table-layout: auto;
-  border-radius: 0.5rem;
-  font-size: 0.8rem;
-  overflow-y: auto;
-  overflow-x: scroll;
-}
-
-th,
-td {
-  border: 1px solid #007bff;
-  padding: 0.5rem;
-  width: 1%;
-}
-
-th {
-  background-color: #007bff;
-  color: white;
-  text-align: left;
-}
-
-thead th:first-child {
-  border-top-left-radius: 0.5rem;
-}
-
-thead th:last-child {
-  border-top-right-radius: 0.5rem;
-}
-
 .bets-info,
 .standings table {
   margin-top: 0.5rem;
@@ -244,6 +213,7 @@ thead th:last-child {
   border-style: hidden; /* hide standard table (collapsed) border */
   box-shadow: 0 0 0 1px #007bff;
   overflow-x: scroll;
+  width: 100%;
 }
 
 .standings table {
@@ -288,9 +258,43 @@ thead th:last-child {
   padding: 0.5rem;
 }
 
+/* Tables */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  overflow-x: auto;
+}
+
+th,
+td {
+  border: 1px solid #007bff;
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+  z-index: -1;
+}
+
+th {
+  background-color: #007bff;
+  color: white;
+  text-align: left;
+}
+
+thead th:first-child {
+  border-top-left-radius: 0.5rem;
+}
+
+thead th:last-child {
+  border-top-right-radius: 0.5rem;
+}
+
 .last-5-matches {
   /* Don't break when overflowing, scroll instead */
-  overflow-x: auto;
+  /* overflow-x: auto; */
   /* display: flex; */
   gap: 0.5rem;
 }

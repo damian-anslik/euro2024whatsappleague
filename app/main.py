@@ -1,38 +1,37 @@
-import logging
-import datetime
-
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI
+from dotenv import load_dotenv
+
+import datetime
+import logging
 
 from app.routers import app_router
-from app.services import scheduled_update_function
+from app.matches.services import scheduled_update_function
 
 
-def configure_scheduler():
-    UPDATE_DATA_EVERY_N_MINUTES = 5
+def configure_scheduler(update_frequency_mins: int = 5):
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         func=lambda: scheduled_update_function(
             datetime.datetime.now(datetime.UTC).today(),
         ),
         trigger="cron",
-        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES}",
+        minute=f"*/{update_frequency_mins}",
     )
     scheduler.add_job(
         func=lambda: scheduled_update_function(
             datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=1),
         ),
         trigger="cron",
-        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES}",
+        minute=f"*/{update_frequency_mins}",
     )
     scheduler.add_job(
         func=lambda: scheduled_update_function(
             datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=2),
         ),
         trigger="cron",
-        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES}",
+        minute=f"*/{update_frequency_mins}",
     )
     scheduler.start()
 
