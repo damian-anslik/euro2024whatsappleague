@@ -86,7 +86,7 @@ def scheduled_update_function(date: datetime.datetime):
 
 def get_matches(
     date: datetime.datetime = None,
-) -> list[dict]:
+) -> dict[str, list[dict]]:
     if date:
         start_time = datetime.datetime(
             date.year, date.month, date.day, 0, 0, 0, tzinfo=datetime.UTC
@@ -105,7 +105,28 @@ def get_matches(
         key=lambda x: x["status"] not in app.matches.common.finished_match_statuses,
         reverse=True,
     )
-    return response_data
+    finished_matches = [
+        match
+        for match in response_data
+        if match["status"] in app.matches.common.finished_match_statuses
+    ]
+    finished_matches.sort(key=lambda match: match["timestamp"])
+    ongoing_matches = [
+        match
+        for match in response_data
+        if match["status"] in app.matches.common.ongoing_match_statuses
+    ]
+    scheduled_matches = [
+        match
+        for match in response_data
+        if match["status"] in app.matches.common.scheduled_match_statuses
+    ]
+    response = {
+        "finished": finished_matches,
+        "ongoing": ongoing_matches,
+        "scheduled": scheduled_matches,
+    }
+    return response
 
 
 def get_match_details(match_id: int) -> dict:

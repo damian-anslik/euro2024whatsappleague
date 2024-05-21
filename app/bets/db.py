@@ -40,7 +40,7 @@ def get_match_bets(match_ids: list[int]) -> list[dict]:
     return match_bets
 
 
-def check_user_has_made_bet(user_id: int, match_id: int) -> bool:
+def get_user_bet_for_match(user_id: int, match_id: int) -> dict:
     request = (
         supabase_client.table("bets")
         .select("*")
@@ -49,7 +49,9 @@ def check_user_has_made_bet(user_id: int, match_id: int) -> bool:
     )
     response = request.execute()
     user_bets = response.data
-    return bool(user_bets)
+    if not user_bets:
+        return None
+    return user_bets[0]
 
 
 def create_bet(bet_data: dict) -> dict:

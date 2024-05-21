@@ -1,7 +1,6 @@
 import datetime
 
 import app.matches.services
-import app.matches.common
 import app.auth.services
 import app.bets.services
 
@@ -13,21 +12,11 @@ def login_handler(username: str):
 
 def root_handler() -> list[dict]:
     matches = app.matches.services.get_matches()
-    finished_matches = [
-        match
-        for match in matches
-        if match["status"] in app.matches.common.finished_match_statuses
-        and match["show"]
-    ]
-    finished_matches.sort(key=lambda match: match["timestamp"])
-    ongoing_matches = [
-        match
-        for match in matches
-        if match["status"] in app.matches.common.ongoing_match_statuses
-        and match["show"]
-    ]
+    finished_matches = matches["finished"]
+    ongoing_matches = matches["ongoing"]
     league_standings = app.bets.services.get_current_standings(
-        finished_matches, ongoing_matches
+        finished_matches=finished_matches,
+        ongoing_matches=ongoing_matches,
     )
     return league_standings
 
@@ -39,42 +28,34 @@ def get_matches_handler() -> dict:
     ]
     todays_matches = app.matches.services.get_matches(dates[0])
     tomorrows_matches = app.matches.services.get_matches(dates[1])
-    ongoing_or_finished_matches = [
-        match["id"] for match in todays_matches if not match["can_users_place_bets"]
+    todays_ongoing_or_finished_matches = (
+        todays_matches["finished"] + todays_matches["ongoing"]
+    )
+    todays_ongoing_or_finished_match_ids = [
+        match["id"] for match in todays_ongoing_or_finished_matches
     ]
-    if ongoing_or_finished_matches:
-        bets = app.bets.services.get_match_bets(ongoing_or_finished_matches)
-        todays_matches = sorted(
-            todays_matches,
-            key=lambda x: x["status"] not in app.matches.common.finished_match_statuses,
-            reverse=True,
-        )
-        for match in todays_matches:
+    if len(todays_ongoing_or_finished_matches) > 0:
+        bets = app.bets.services.get_match_bets(todays_ongoing_or_finished_match_ids)
+        # Add the bets information onto ongoing or finished matches
+        for match in todays_matches["ongoing"]:
             match_bets = [bet for bet in bets if bet["match_id"] == match["id"]]
-            print(match_bets)
+            match_bets.sort(key=lambda x: x["user"]["name"])
+            match["bets"] = match_bets
+        for match in todays_matches["finished"]:
+            match_bets = [bet for bet in bets if bet["match_id"] == match["id"]]
             match_bets.sort(key=lambda x: x["user"]["name"])
             match["bets"] = match_bets
     # Order matches by status
-    finished_matches = [
-        match
-        for match in todays_matches
-        if match["status"] in app.matches.common.finished_match_statuses
-    ]
+    finished_matches = todays_matches["finished"]
     finished_matches.sort(key=lambda match: match["timestamp"])
-    ongoing_matches = [
-        match
-        for match in todays_matches
-        if match["status"] in app.matches.common.ongoing_match_statuses
-    ]
+    ongoing_matches = todays_matches["ongoing"]
     ongoing_matches.sort(key=lambda match: match["timestamp"])
-    scheduled_matches = [
-        match
-        for match in todays_matches
-        if match["status"] in app.matches.common.scheduled_match_statuses
-    ]
+    scheduled_matches = todays_matches["scheduled"]
     scheduled_matches.sort(key=lambda match: match["timestamp"])
     todays_matches = ongoing_matches + scheduled_matches + finished_matches
-    tomorrows_matches = sorted(tomorrows_matches, key=lambda x: x["timestamp"])
+    tomorrows_matches = sorted(
+        tomorrows_matches["scheduled"], key=lambda x: x["timestamp"]
+    )
     response = {
         "today": todays_matches,
         "tomorrow": tomorrows_matches,

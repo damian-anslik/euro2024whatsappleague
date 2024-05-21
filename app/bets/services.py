@@ -118,19 +118,15 @@ def create_user_match_prediction(
         "predicted_away_goals": predicted_away_goals,
         "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
     }
-    user_already_made_prediction_for_match = app.bets.db.check_user_has_made_bet(
-        user_id, match_id
-    )
-    if user_already_made_prediction_for_match:
+    user_bet_for_match = app.bets.db.get_user_bet_for_match(user_id, match_id)
+    if user_bet_for_match:
         predicted_scores_are_the_same = (
-            user_already_made_prediction_for_match[0]["predicted_home_goals"]
-            == predicted_home_goals
-            and user_already_made_prediction_for_match[0]["predicted_away_goals"]
-            == predicted_away_goals
+            user_bet_for_match["predicted_home_goals"] == predicted_home_goals
+            and user_bet_for_match["predicted_away_goals"] == predicted_away_goals
         )
         if predicted_scores_are_the_same:
-            return user_already_made_prediction_for_match[0]
-        bet_data.update({"id": user_already_made_prediction_for_match[0]["id"]})
+            return user_bet_for_match
+        bet_data.update({"id": user_bet_for_match["id"]})
     bet_creation_response = app.bets.db.create_bet(bet_data)
     return bet_creation_response
 

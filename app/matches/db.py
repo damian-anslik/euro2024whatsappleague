@@ -29,6 +29,7 @@ def get_matches(
         request = request.gt("timestamp", start_time.isoformat())
     if end_time:
         request = request.lt("timestamp", end_time.isoformat())
+    request = request.eq("show", True)
     response = request.execute()
     return response.data
 

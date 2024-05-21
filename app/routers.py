@@ -27,8 +27,10 @@ def login(username: str = Form(...)):
             )
         return response
     except Exception as e:
-        logging.error(f"Error logging in: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.exception(e)
+        raise HTTPException(
+            status_code=500, detail="Something went wrong, please try again"
+        )
 
 
 @app_router.get("/")
@@ -52,17 +54,29 @@ def read_root(request: Request):
 
 @app_router.get("/matches")
 async def get_matches():
-    matches = app.services.get_matches_handler()
-    return matches
+    try:
+        matches = app.services.get_matches_handler()
+        return matches
+    except Exception as e:
+        logging.exception(e)
+        raise HTTPException(
+            status_code=500, detail="Something went wrong, please try again"
+        )
 
 
 @app_router.get("/bets")
 async def get_bets(request: Request):
-    session_id = request.cookies.get("session_id", None)
-    if not session_id or not app.auth.services.check_user_session(session_id):
-        return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    user_bets = app.services.get_bets_handler(session_id)
-    return user_bets
+    try:
+        session_id = request.cookies.get("session_id", None)
+        if not session_id or not app.auth.services.check_user_session(session_id):
+            return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+        user_bets = app.services.get_bets_handler(session_id)
+        return user_bets
+    except Exception as e:
+        logging.exception(e)
+        raise HTTPException(
+            status_code=500, detail="Something went wrong, please try again"
+        )
 
 
 @app_router.post("/bets")
@@ -84,5 +98,7 @@ def place_bet(
         )
         return updated_bet
     except Exception as e:
-        logging.error(f"Error placing bet: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.exception(e)
+        raise HTTPException(
+            status_code=500, detail="Something went wrong, please try again"
+        )
