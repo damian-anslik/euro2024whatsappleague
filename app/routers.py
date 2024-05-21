@@ -7,7 +7,6 @@ import logging
 
 import app.services
 import app.auth.services
-import app.bets.services
 
 app_router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")

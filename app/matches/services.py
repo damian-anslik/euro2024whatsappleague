@@ -145,6 +145,6 @@ def configure_scheduler(update_frequency_mins: int = 5, num_days_to_update: int 
                 + datetime.timedelta(days=i),
             ),
             trigger="cron",
-            minute=f"*/{update_frequency_mins}",
+            minute=f"*/{update_frequency_mins+i}",  # Distribute requests to be in different minutes - max 30 requests per minute
         )
     scheduler.start()
