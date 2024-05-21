@@ -1,0 +1,6 @@
+{
+    "scheduler": {
+        "update_matches_every_n_mins": 5,
+        "num_days_to_fetch": 3
+    }
+}

@@ -1,4 +1,6 @@
 import datetime
+import pathlib
+import json
 
 import app.matches.services
 import app.auth.services
@@ -85,3 +87,11 @@ def place_bet_handler(
         user_id, match_id, predicted_home_goals, predicted_away_goals
     )
     return bet
+
+
+with open(pathlib.Path(__file__).parent.joinpath("config.json")) as f:
+    scheduler_config = json.load(f)["scheduler"]
+app.matches.services.configure_scheduler(
+    update_frequency_mins=scheduler_config["update_matches_every_n_mins"],
+    num_days_to_update=scheduler_config["num_days_to_fetch"],
+)

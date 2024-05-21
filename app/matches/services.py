@@ -1,3 +1,5 @@
+from apscheduler.schedulers.background import BackgroundScheduler
+
 import datetime
 import logging
 
@@ -132,3 +134,17 @@ def get_matches(
 def get_match_details(match_id: int) -> dict:
     match = app.matches.db.get_match(match_id)
     return match
+
+
+def configure_scheduler(update_frequency_mins: int = 5, num_days_to_update: int = 3):
+    scheduler = BackgroundScheduler()
+    for i in range(num_days_to_update):
+        scheduler.add_job(
+            func=lambda: scheduled_update_function(
+                datetime.datetime.now(datetime.UTC).today()
+                + datetime.timedelta(days=i),
+            ),
+            trigger="cron",
+            minute=f"*/{update_frequency_mins}",
+        )
+    scheduler.start()
