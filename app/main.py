@@ -25,14 +25,14 @@ def configure_scheduler():
             datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=1),
         ),
         trigger="cron",
-        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES}",
+        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES+1}",
     )
     scheduler.add_job(
         func=lambda: scheduled_update_function(
             datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=2),
         ),
         trigger="cron",
-        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES}",
+        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES+2}",
     )
     scheduler.start()
 

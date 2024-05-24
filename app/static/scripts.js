@@ -159,6 +159,12 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
   } else if (isOngoingMatch) {
     fixtureInfo.classList.add("ongoing");
   }
+  let leagueName = document.createElement("span");
+  leagueName.classList.add("league-name");
+  leagueName.innerText = matchData.league_name;
+  if (matchData.league_name) {
+    fixtureInfo.appendChild(leagueName);
+  }
   let fixtureTime = document.createElement("span");
   fixtureTime.classList.add("fixture-time");
   let timestamp = new Date(matchData.timestamp).getTime();

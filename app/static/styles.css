@@ -163,10 +163,12 @@ form {
   padding: 1rem;
 }
 
-.fixture-time {
+.fixture-time,
+.league-name {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding-block: 0.5rem;
 }
 
 .loading-indicator-container {

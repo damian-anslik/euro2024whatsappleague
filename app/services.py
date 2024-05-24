@@ -77,6 +77,7 @@ def get_matches_from_api(
                 "league_id": league_id,
                 "season": season,
                 "can_users_place_bets": can_user_place_bet,
+                "league_name": fixture["league"]["name"],
                 "home_team_name": fixture["teams"]["home"]["name"],
                 "away_team_name": fixture["teams"]["away"]["name"],
                 "home_team_logo": fixture["teams"]["home"]["logo"],
