@@ -1,17 +1,28 @@
-import os
-import time
-import logging
-import datetime
-
 import requests
 import supabase
+from apscheduler.schedulers.background import BackgroundScheduler
+
+import datetime
+import datetime
+import logging
+import os
+
 
 supabase_client = supabase.create_client(
     supabase_key=os.getenv("SUPABASE_KEY"),
     supabase_url=os.getenv("SUPABASE_URL"),
 )
-bets_table = supabase_client.table("bets")
-matches_table = supabase_client.table("matches")
+tables = {
+    "bets": "bets_duplicate",
+    "matches": "matches",
+    "leagues": "leagues",
+    "match_checks": "match_checks",
+}
+bets_table = supabase_client.table(tables["bets"])
+leagues_table = supabase_client.table(tables["leagues"])
+matches_table = supabase_client.table(tables["matches"])
+match_checks_table = supabase_client.table(tables["match_checks"])
+
 scheduled_match_statuses = ["NS", "TBD"]
 regular_time_match_statuses = ["1H", "HT", "2H"]
 extra_time_match_statuses = ["ET", "BT", "P", "INT"]
@@ -101,8 +112,7 @@ def get_matches_for_given_date(
         date.year, date.month, date.day, 23, 59, 59, tzinfo=datetime.UTC
     )
     response_data = (
-        supabase_client.table("matches")
-        .select("*")
+        matches_table.select("*")
         .gt("timestamp", start_of_day.isoformat())
         .lt("timestamp", end_of_day.isoformat())
         .order("timestamp")
@@ -117,31 +127,35 @@ def get_matches_for_given_date(
     ongoing_or_finished_matches = [
         match["id"] for match in response_data if not match["can_users_place_bets"]
     ]
-    if ongoing_or_finished_matches:
-        # Get the list of bets for the ongoing matches
-        bets = (
-            supabase_client.table("bets")
-            .select("*, user:sessions(name)")
-            .in_("match_id", ongoing_or_finished_matches)
-            .execute()
-            .data
-        )
-        # Add the bets on the ongoing matches to the response data)
-        for match in response_data:
-            match_bets = [bet for bet in bets if bet["match_id"] == match["id"]]
-            match_bets.sort(key=lambda x: x["user"]["name"])
-            match["bets"] = match_bets
+    if not ongoing_or_finished_matches:
+        return []
+    users = supabase_client.auth.admin.list_users()
+    users_data = {user.id: user.user_metadata["username"] for user in users}
+    user_bets = (
+        bets_table.select("*")
+        .in_("match_id", ongoing_or_finished_matches)
+        .execute()
+        .data
+    )
+    user_ids = users_data.keys()
+    parsed_user_bets = []
+    for bet in user_bets:
+        user_id = bet["user_id"]
+        if user_id not in user_ids:
+            user_bets.remove(bet)
+            continue
+        bet["user"] = {"name": users_data[user_id]}
+        parsed_user_bets.append(bet)
+    # Add the bets on the ongoing matches to the response data)
+    for match in response_data:
+        match_bets = [bet for bet in parsed_user_bets if bet["match_id"] == match["id"]]
+        match_bets.sort(key=lambda x: x["user"]["name"])
+        match["bets"] = match_bets
     return response_data
 
 
 def did_check_for_matches_today(params: str) -> bool:
-    response_data = (
-        supabase_client.table("match_checks")
-        .select("*")
-        .eq("params", params)
-        .execute()
-        .data
-    )
+    response_data = match_checks_table.select("*").eq("params", params).execute().data
     return bool(response_data)
 
 
@@ -162,8 +176,7 @@ def update_match_data(
         date.year, date.month, date.day, 23, 59, 59, tzinfo=datetime.UTC
     )
     matches_in_db = (
-        supabase_client.table("matches")
-        .select("*")
+        matches_table.select("*")
         .eq("league_id", league_id)
         .eq("season", season)
         .gt("timestamp", start_of_day.isoformat())
@@ -175,8 +188,7 @@ def update_match_data(
     if not matches_in_db:
         # Check if we have already checked for matches for the day, if not we will fetch the matches from the API
         already_checked_for_matches = (
-            supabase_client.table("match_checks")
-            .select("*")
+            match_checks_table.select("*")
             .eq("league_id", league_id)
             .eq("season", season)
             .eq("date", date.date().strftime("%Y-%m-%d"))
@@ -194,9 +206,9 @@ def update_match_data(
         todays_matches = get_matches_from_api(league_id, season, date)
         for match in todays_matches:
             match["show"] = show_by_default
-        supabase_client.table("matches").upsert(todays_matches).execute()
+        matches_table.upsert(todays_matches).execute()
         # Log that we checked for matches today
-        supabase_client.table("match_checks").insert(
+        match_checks_table.insert(
             {
                 "league_id": league_id,
                 "season": season,
@@ -230,7 +242,7 @@ def update_match_data(
         match["show"] = match_in_db["show"]
         updated_data.append(match)
     logging.info(f"Updated data for league_id={league_id}: {updated_data}")
-    supabase_client.table("matches").upsert(updated_data).execute()
+    matches_table.upsert(updated_data).execute()
 
 
 def calculate_points_for_bet(bet_data: dict, match_data: dict) -> int:
@@ -259,12 +271,7 @@ def calculate_points_for_bet(bet_data: dict, match_data: dict) -> int:
 
 def get_current_standings() -> list[dict]:
     matches = (
-        supabase_client.table("matches")
-        .select("*")
-        .eq("show", True)
-        .order("timestamp")
-        .execute()
-        .data
+        matches_table.select("*").eq("show", True).order("timestamp").execute().data
     )
     SHOW_LAST_N_FINISHED_MATCHES = 5
     last_n_finished_matches = [
@@ -273,14 +280,14 @@ def get_current_standings() -> list[dict]:
     ongoing_matches = [
         match["id"] for match in matches if match["status"] in ongoing_match_statuses
     ]
-    users = supabase_client.table("sessions").select("*").execute().data
-    bets = supabase_client.table("bets").select("*").execute().data
+    users = supabase_client.auth.admin.list_users()
+    bets = bets_table.select("*").execute().data
     bets = [
         bet for bet in bets if bet["match_id"] in [match["id"] for match in matches]
     ]
     standings = []
     for user in users:
-        user_bets = [bet for bet in bets if bet["user_id"] == user["id"]]
+        user_bets = [bet for bet in bets if bet["user_id"] == user.id]
         user_points = 0
         potential_points = 0
         for bet in user_bets:
@@ -305,8 +312,8 @@ def get_current_standings() -> list[dict]:
                 points_in_last_n_finished_matches.append(None)
         standings.append(
             {
-                "user_id": user["id"],
-                "name": user["name"],
+                "user_id": user.id,
+                "name": user.user_metadata["username"],
                 "points": user_points,
                 "potential_points": (
                     potential_points if len(ongoing_matches) != 0 else None
@@ -352,13 +359,7 @@ def create_user_match_prediction(
     predicted_home_goals: int,
     predicted_away_goals: int,
 ) -> dict:
-    match_data = (
-        supabase_client.table("matches")
-        .select("*")
-        .eq("id", match_id)
-        .execute()
-        .data[0]
-    )
+    match_data = matches_table.select("*").eq("id", match_id).execute().data[0]
     if not match_data["can_users_place_bets"]:
         raise ValueError("User cannot place a bet on this fixture")
     # Check if there is less than 5 minutes left for the match to start
@@ -368,7 +369,7 @@ def create_user_match_prediction(
         > 5 * 60
     ):
         match_data["can_users_place_bets"] = False
-        supabase_client.table("matches").upsert([match_data]).execute()
+        matches_table.upsert([match_data]).execute()
         raise ValueError(
             "Match about to start - user cannot place a bet on this fixture"
         )
@@ -380,8 +381,7 @@ def create_user_match_prediction(
         "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
     }
     user_already_made_prediction_for_match = (
-        supabase_client.table("bets")
-        .select("*")
+        bets_table.select("*")
         .eq("user_id", user_id)
         .eq("match_id", match_id)
         .execute()
@@ -397,19 +397,17 @@ def create_user_match_prediction(
         if predicted_scores_are_the_same:
             return user_already_made_prediction_for_match[0]
         bet_data.update({"id": user_already_made_prediction_for_match[0]["id"]})
-    bet_creation_response = supabase_client.table("bets").upsert(bet_data).execute()
+    bet_creation_response = bets_table.upsert(bet_data).execute()
     return bet_creation_response.data[0]
 
 
 def get_user_bets(user_id: int) -> list[dict]:
-    user_bets = (
-        supabase_client.table("bets").select("*").eq("user_id", user_id).execute()
-    )
+    user_bets = bets_table.select("*").eq("user_id", user_id).execute()
     return user_bets.data
 
 
 def scheduled_update_function(date: datetime.datetime):
-    leagues = supabase_client.table("leagues").select("*").execute().data
+    leagues = leagues_table.select("*").execute().data
     for league in leagues:
         try:
             update_match_data(
@@ -419,19 +417,31 @@ def scheduled_update_function(date: datetime.datetime):
             logging.error(f"Error updating data for league {league['id']}: {e}")
 
 
-def get_currently_tracked_leagues() -> list[dict]:
-    leagues = supabase_client.table("leagues").select("*").execute().data
-    return leagues
+def configure_scheduler():
+    UPDATE_DATA_EVERY_N_MINUTES = 5
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        func=lambda: scheduled_update_function(
+            datetime.datetime.now(datetime.UTC).today(),
+        ),
+        trigger="cron",
+        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES}",
+    )
+    scheduler.add_job(
+        func=lambda: scheduled_update_function(
+            datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=1),
+        ),
+        trigger="cron",
+        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES+1}",
+    )
+    scheduler.add_job(
+        func=lambda: scheduled_update_function(
+            datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=2),
+        ),
+        trigger="cron",
+        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES+2}",
+    )
+    scheduler.start()
 
 
-def update_tracked_leagues(
-    league_id: int, season: str, league_name: str, show: bool
-) -> dict:
-    league_data = {
-        "id": league_id,
-        "name": league_name,
-        "season": season,
-        "show_by_default": show,
-    }
-    response = supabase_client.table("leagues").upsert(league_data).execute()
-    return response.data[0]
+# configure_scheduler()

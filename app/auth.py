@@ -1,6 +1,44 @@
+import supabase
+import gotrue.errors
+
 import os
 
-import supabase
+
+# class AuthClient:
+#     def __init__(self):
+#         self.supabase_client = supabase.create_client(
+#             supabase_key=os.getenv("SUPABASE_KEY"),
+#             supabase_url=os.getenv("SUPABASE_URL"),
+#         )
+
+#     def signup(self, email: str, username: str, password: str) -> str:
+#         try:
+#             signup_response = self.supabase_client.auth.sign_up(
+#                 {
+#                     "email": email,
+#                     "password": password,
+#                     "options": {"data": {"username": username}},
+#                 }
+#             )
+#             access_token = signup_response.session.access_token
+#             return access_token
+#         except gotrue.errors.AuthApiError as e:
+#             raise ValueError(e)
+
+#     def login(self, email: str, password: str) -> str:
+#         try:
+#             login_response = self.supabase_client.auth.sign_in_with_password(
+#                 {"email": email, "password": password}
+#             )
+#             access_token = login_response.session.access_token
+#             return access_token
+#         except gotrue.errors.AuthApiError as e:
+#             raise ValueError(e)
+
+#     def check_user_session(self, access_token: str) -> str:
+#         decoded_token = self.supabase_client.auth._decode_jwt(access_token)
+#         user_id = decoded_token["sub"]
+#         return user_id
 
 
 supabase_client = supabase.create_client(
@@ -9,43 +47,33 @@ supabase_client = supabase.create_client(
 )
 
 
-def create_user_session(name: str) -> str:
-    session_id = (
-        supabase_client.table("sessions").insert({"name": name}).execute().data[0]["id"]
-    )
-    return session_id
-
-
-def get_user_session(name: str) -> str:
-    if ":" in name:
-        username = name.split(":")[0]
-        id = name.split(":")[1]
-        existing_session = (
-            supabase_client.table("sessions")
-            .select("*")
-            .eq("id", id)
-            .eq("name", username)
-            .execute()
-            .data
+def signup(email: str, username: str, password: str) -> str:
+    try:
+        signup_response = supabase_client.auth.sign_up(
+            {
+                "email": email,
+                "password": password,
+                "options": {"data": {"username": username}},
+            }
         )
-        if existing_session:
-            return id
-        else:
-            new_session_id = create_user_session(username)
-            return new_session_id
-    else:
-        new_session_id = create_user_session(name)
-        return new_session_id
+        access_token = signup_response.session.access_token
+        return access_token
+    except gotrue.errors.AuthApiError as e:
+        raise ValueError(e)
 
 
-def check_user_session(session_id: str) -> bool:
-    session = (
-        supabase_client.table("sessions")
-        .select("*")
-        .eq("id", session_id)
-        .execute()
-        .data
-    )
-    if not session:
-        return False
-    return True
+def login(email: str, password: str) -> str:
+    try:
+        login_response = supabase_client.auth.sign_in_with_password(
+            {"email": email, "password": password}
+        )
+        access_token = login_response.session.access_token
+        return access_token
+    except gotrue.errors.AuthApiError as e:
+        raise ValueError(e)
+
+
+def check_user_session(access_token: str) -> str:
+    decoded_token = supabase_client.auth._decode_jwt(access_token)
+    user_id = decoded_token["sub"]
+    return user_id

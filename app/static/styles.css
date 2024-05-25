@@ -24,19 +24,30 @@ main {
   padding: 1rem;
 }
 
-.create-session-container form {
+.create-session-container a {
+  text-align: center;
+}
+
+.login-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: 100%;
 }
 
-.create-session-container form input {
+.login-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.login-form .form-group input {
   padding: 0.5rem;
   border-radius: 0.5rem;
   border: 1px solid #007bff;
 }
 
-.create-session-container form button {
+.login-form button {
   background-color: #007bff;
   color: white;
   border: none;
