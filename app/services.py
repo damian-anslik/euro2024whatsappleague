@@ -2,27 +2,28 @@ import requests
 import supabase
 from apscheduler.schedulers.background import BackgroundScheduler
 
+import configparser
 import datetime
 import datetime
 import logging
 import os
 
-
+config = configparser.ConfigParser()
+config.read("config.ini")
 supabase_client = supabase.create_client(
     supabase_key=os.getenv("SUPABASE_KEY"),
     supabase_url=os.getenv("SUPABASE_URL"),
 )
-tables = {
-    "bets": "bets_duplicate",
-    "matches": "matches",
-    "leagues": "leagues",
-    "match_checks": "match_checks",
-}
-bets_table = supabase_client.table(tables["bets"])
-leagues_table = supabase_client.table(tables["leagues"])
-matches_table = supabase_client.table(tables["matches"])
-match_checks_table = supabase_client.table(tables["match_checks"])
-
+bets_table = supabase_client.table(table_name=config.get("database", "bets_table"))
+leagues_table = supabase_client.table(
+    table_name=config.get("database", "leagues_table")
+)
+matches_table = supabase_client.table(
+    table_name=config.get("database", "matches_table")
+)
+match_checks_table = supabase_client.table(
+    table_name=config.get("database", "match_checks_table")
+)
 scheduled_match_statuses = ["NS", "TBD"]
 regular_time_match_statuses = ["1H", "HT", "2H"]
 extra_time_match_statuses = ["ET", "BT", "P", "INT"]
@@ -105,16 +106,20 @@ def get_matches_from_api(
 def get_matches_for_given_date(
     date: datetime.datetime,
 ) -> list[dict]:
-    start_of_day = datetime.datetime(
-        date.year, date.month, date.day, 0, 0, 0, tzinfo=datetime.UTC
-    )
-    end_of_day = datetime.datetime(
-        date.year, date.month, date.day, 23, 59, 59, tzinfo=datetime.UTC
-    )
     response_data = (
         matches_table.select("*")
-        .gt("timestamp", start_of_day.isoformat())
-        .lt("timestamp", end_of_day.isoformat())
+        .gt(
+            "timestamp",
+            datetime.datetime(
+                date.year, date.month, date.day, 0, 0, 0, tzinfo=datetime.UTC
+            ).isoformat(),
+        )
+        .lt(
+            "timestamp",
+            datetime.datetime(
+                date.year, date.month, date.day, 23, 59, 59, tzinfo=datetime.UTC
+            ).isoformat(),
+        )
         .order("timestamp")
         .execute()
         .data
@@ -127,36 +132,24 @@ def get_matches_for_given_date(
     ongoing_or_finished_matches = [
         match["id"] for match in response_data if not match["can_users_place_bets"]
     ]
-    if not ongoing_or_finished_matches:
-        return []
-    users = supabase_client.auth.admin.list_users()
-    users_data = {user.id: user.user_metadata["username"] for user in users}
-    user_bets = (
-        bets_table.select("*")
-        .in_("match_id", ongoing_or_finished_matches)
-        .execute()
-        .data
-    )
-    user_ids = users_data.keys()
-    parsed_user_bets = []
-    for bet in user_bets:
-        user_id = bet["user_id"]
-        if user_id not in user_ids:
-            user_bets.remove(bet)
-            continue
-        bet["user"] = {"name": users_data[user_id]}
-        parsed_user_bets.append(bet)
-    # Add the bets on the ongoing matches to the response data)
-    for match in response_data:
-        match_bets = [bet for bet in parsed_user_bets if bet["match_id"] == match["id"]]
-        match_bets.sort(key=lambda x: x["user"]["name"])
-        match["bets"] = match_bets
+    if ongoing_or_finished_matches:
+        users = supabase_client.auth.admin.list_users()
+        users_data = {user.id: user.user_metadata["username"] for user in users}
+        user_bets = (
+            bets_table.select("*")
+            .in_("match_id", ongoing_or_finished_matches)
+            .execute()
+            .data
+        )
+        for bet in user_bets:
+            user_id = bet["user_id"]
+            bet["user"] = {"name": users_data[user_id]}
+        # Add the bets on the ongoing matches to the response data
+        for match in response_data:
+            match_bets = [bet for bet in user_bets if bet["match_id"] == match["id"]]
+            match_bets.sort(key=lambda x: x["user"]["name"])
+            match["bets"] = match_bets
     return response_data
-
-
-def did_check_for_matches_today(params: str) -> bool:
-    response_data = match_checks_table.select("*").eq("params", params).execute().data
-    return bool(response_data)
 
 
 def update_match_data(
@@ -417,31 +410,33 @@ def scheduled_update_function(date: datetime.datetime):
             logging.error(f"Error updating data for league {league['id']}: {e}")
 
 
-def configure_scheduler():
-    UPDATE_DATA_EVERY_N_MINUTES = 5
+def configure_scheduler(update_interval_minutes: int = 5):
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         func=lambda: scheduled_update_function(
             datetime.datetime.now(datetime.UTC).today(),
         ),
         trigger="cron",
-        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES}",
+        minute=f"*/{update_interval_minutes}",
     )
     scheduler.add_job(
         func=lambda: scheduled_update_function(
             datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=1),
         ),
         trigger="cron",
-        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES+1}",
+        minute=f"*/{update_interval_minutes+1}",
     )
     scheduler.add_job(
         func=lambda: scheduled_update_function(
             datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=2),
         ),
         trigger="cron",
-        minute=f"*/{UPDATE_DATA_EVERY_N_MINUTES+2}",
+        minute=f"*/{update_interval_minutes+2}",
     )
     scheduler.start()
 
 
-# configure_scheduler()
+if config.getboolean("scheduler", "enabled"):
+    configure_scheduler(
+        update_interval_minutes=config.getint("scheduler", "update_interval_minutes")
+    )
