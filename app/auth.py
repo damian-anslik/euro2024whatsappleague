@@ -77,3 +77,16 @@ def check_user_session(access_token: str) -> str:
     decoded_token = supabase_client.auth._decode_jwt(access_token)
     user_id = decoded_token["sub"]
     return user_id
+
+
+def send_password_reset_request(email: str):
+    supabase_client.auth.reset_password_email(
+        email=email, options={"redirect_to": "http://localhost:8000/change-password"}
+    )
+
+
+def change_password(user_id: str, password: str):
+    change_password_response = supabase_client.auth.admin.update_user_by_id(
+        uid=user_id, attributes={"password": password}
+    )
+    print(change_password_response.model_dump())

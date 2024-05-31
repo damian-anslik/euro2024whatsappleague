@@ -82,6 +82,37 @@ def logout(_: Request):
     return response
 
 
+@app_router.get("/reset-password")
+def reset_password_form(request: Request):
+    return templates.TemplateResponse("reset-password.html", {"request": request})
+
+
+@app_router.post("/reset-password")
+def reset_password(email: str = Form(...)):
+    try:
+        auth.send_password_reset_request(email)
+        return {"message": "Password reset link sent to your email."}
+    except Exception as e:
+        logging.error(f"Error resetting password: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app_router.get("/change-password")
+def change_password_form(request: Request):
+    return templates.TemplateResponse("change-password.html", {"request": request})
+
+
+@app_router.post("/change-password")
+def change_password(password: str = Form(...), token: str = Form(...)):
+    try:
+        user_id = auth.check_user_session(token)
+        auth.change_password(user_id=user_id, password=password)
+        return {"message": "Password changed successfully."}
+    except Exception as e:
+        logging.error(f"Error changing password: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app_router.get("/")
 def read_root(request: Request):
     access_token = request.cookies.get("access_token", None)
