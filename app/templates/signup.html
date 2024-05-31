@@ -3,6 +3,7 @@
 {% block content %}
 <div class="create-session-container">
     <h1>Signup</h1>
+    <div class="error-container"></div>
     <form action="/signup" method="post" class="login-form">
         <div class="form-group">
             <label for="email">Email</label>
@@ -25,4 +26,45 @@
         <a href="/reset-password" class="btn btn-link">Forgot your password? Reset it now</a>
     </form>
 </div>
+
+<script>
+    let errorMessage = document.querySelector('.error-container');
+    let submitButton = document.querySelector('button[type="submit"]');
+    document.querySelector('form').addEventListener('submit', async function (event) {
+        errorMessage.style.display = 'none';
+        submitButton.disabled = true;
+        submitButton.textContent = 'Creating your account...';
+        event.preventDefault();
+        const email = document.querySelector('input[name="email"]').value;
+        const username = document.querySelector('input[name="username"]').value;
+        const password = document.querySelector('input[name="password"]').value;
+        const confirmPassword = document.querySelector('input[name="confirm_password"]').value;
+        if (password !== confirmPassword) {
+            errorMessage.textContent = 'Passwords do not match';
+            errorMessage.style.display = 'block';
+            errorMessage.style.marginBottom = '10px';
+            return;
+        }
+        const form = new FormData();
+        form.append('email', email);
+        form.append('password', password);
+        form.append('username', username);
+        let response = await fetch('/signup', {
+            method: 'POST',
+            body: form,
+            redirect: 'follow'
+        })
+        if (response.redirected) {
+            window.location.href = response.url;
+        }
+        else {
+            let responseData = await response.json();
+            errorMessage.textContent = responseData.detail;
+            errorMessage.style.display = 'block';
+            errorMessage.style.marginBottom = '10px';
+        }
+        submitButton.disabled = false;
+        submitButton.textContent = 'Create account';
+    });
+</script>
 {% endblock %}

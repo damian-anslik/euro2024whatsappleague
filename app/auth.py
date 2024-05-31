@@ -49,6 +49,15 @@ supabase_client = supabase.create_client(
 
 def signup(email: str, username: str, password: str) -> str:
     try:
+        # Check username is available
+        is_username_taken = any(
+            [
+                user.user_metadata["username"] == username
+                for user in supabase_client.auth.admin.list_users()
+            ]
+        )
+        if is_username_taken:
+            raise ValueError("Username is already taken")
         signup_response = supabase_client.auth.sign_up(
             {
                 "email": email,

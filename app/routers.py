@@ -35,7 +35,7 @@ def signup(
         )
         return response
     except ValueError as e:
-        logging.error(f"Error logging in: {e}")
+        logging.error(f"Error creating user: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logging.exception(e)

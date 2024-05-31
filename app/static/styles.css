@@ -61,6 +61,12 @@ form {
   flex-direction: column;
 }
 
+form > button:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}
+
 .league-container {
   padding: 1rem;
   padding-top: 0;
