@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 import datetime
 import logging
 
-from app import services, auth
+from app import handlers, auth
 
 app_router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -121,7 +121,7 @@ def read_root(request: Request):
         return response
     try:
         _ = auth.check_user_session(access_token)
-        league_standings = services.get_current_standings()
+        league_standings = handlers.get_current_standings()
         response = templates.TemplateResponse(
             "index.html",
             {
@@ -147,14 +147,14 @@ async def get_rules(request: Request):
 async def get_matches():
     todays_date = datetime.datetime.now(datetime.UTC).today()
     tomorrows_date = todays_date + datetime.timedelta(days=1)
-    todays_matches = services.get_matches_for_given_date(
+    todays_matches = handlers.get_matches_for_given_date(
         date=datetime.datetime(
             todays_date.year,
             todays_date.month,
             todays_date.day,
         ),
     )
-    tomorrows_matches = services.get_matches_for_given_date(
+    tomorrows_matches = handlers.get_matches_for_given_date(
         date=datetime.datetime(
             tomorrows_date.year,
             tomorrows_date.month,
@@ -175,7 +175,7 @@ async def get_user_bets(request: Request):
         return response
     try:
         user_id = auth.check_user_session(access_token)
-        user_bets = services.get_user_bets(user_id=user_id)
+        user_bets = handlers.get_user_bets(user_id=user_id)
         return user_bets
     except Exception as e:
         logging.error(f"Error fetching user bets: {e}")
@@ -195,7 +195,7 @@ def place_bet(
         return response
     try:
         user_id = auth.check_user_session(access_token)
-        updated_bet = services.create_user_match_prediction(
+        updated_bet = handlers.create_user_match_prediction(
             user_id=user_id,
             match_id=fixture_id,
             predicted_home_goals=home_goals,
