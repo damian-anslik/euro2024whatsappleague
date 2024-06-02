@@ -2,17 +2,16 @@
 
 {% block content %}
 <div class="league-container">
-    <h2>Euro 2024 Whatsapp League</h2>
-    <hr>
-    <div class="standings">
-        <h3>🏆 Leaderboard</h3>
+
+    <h3>🏆 Leaderboard</h3>
+    <div class="table-container">
         <table>
             <thead>
                 <tr>
                     <th>Position</th>
                     <th>Name</th>
                     <th>Points</th>
-                    <!-- <th>Last 5 Matches</th> -->
+                    <th>Last 5 Matches</th>
                 </tr>
             </thead>
             <tbody>
@@ -26,12 +25,11 @@
                         (+{{ user.potential_points}})
                         {% endif %}
                     </td>
-                    <!-- <td class="last-5-matches">
+                    <td class="last-5-matches">
                         {% for points in user.points_in_last_n_finished_matches %}
-                        <span class="last-5-matches-points-{{points if points else 0}}">{{points if points
-                            else 0}}</span>
+                        {{ points if points else 0}}
                         {% endfor %}
-                    </td> -->
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -45,10 +43,6 @@
     </div>
     <div class="tomorrows-fixtures" hidden>
         <h3>⚽ Tomorrow's Matches</h3>
-    </div>
-    <div>
-        <a href="/rules">Rules</a>
-        <a href="/logout">Logout</a>
     </div>
     <script src="/static/scripts.js" defer></script>
 </div>

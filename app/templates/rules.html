@@ -1,23 +1,28 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="league-container">
 
-<ol>
-    <li>Predictions must be submitted before the match starts. Users can update their predictions at any time up until
-        the match begins.</li>
-    <li>Points are awarded as follows:
-        <ul>
-            <li>Correct score: 5 points</li>
-            <li>Correct margin (difference between the goals): 3 points</li>
-            <li>Correct outcome (win, lose, or draw): 1 point</li>
-            <li>Incorrect prediction: 0 points</li>
-        </ul>
-    </li>
-    <li>Only the highest applicable points will be awarded for each prediction. For example, if a user predicts a score
-        of 2-1 and the match ends 2-1, they will receive points for the correct score only (5 points).</li>
-    <li>Points are based on the score at the end of regular time. Goals scored in extra time do not count.</li>
-    <li>Scores are updated every 5 minutes.</li>
-    <li>If there is a tie in the total points, the user with the most correct score predictions will be ranked higher.
-    </li>
-</ol>
+    <ol>
+        <li>Predictions must be submitted before the match starts. Users can update their predictions at any time up
+            until
+            the match begins.</li>
+        <li>Points are awarded as follows:
+            <ul>
+                <li>Correct score: 5 points</li>
+                <li>Correct margin (difference between the goals): 3 points</li>
+                <li>Correct outcome (win, lose, or draw): 1 point</li>
+                <li>Incorrect prediction: 0 points</li>
+            </ul>
+        </li>
+        <li>Only the highest applicable points will be awarded for each prediction. For example, if a user predicts a
+            score
+            of 2-1 and the match ends 2-1, they will receive points for the correct score only (5 points).</li>
+        <li>Points are based on the score at the end of regular time. Goals scored in extra time do not count.</li>
+        <li>Scores are updated every 5 minutes.</li>
+        <li>If there is a tie in the total points, the user with the most correct score predictions will be ranked
+            higher.
+        </li>
+    </ol>
+</div>
 {% endblock %}

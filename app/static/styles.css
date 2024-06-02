@@ -43,7 +43,6 @@ main {
 
 .login-form .form-group input {
   padding: 0.5rem;
-  border-radius: 0.5rem;
   border: 1px solid #007bff;
 }
 
@@ -51,7 +50,6 @@ main {
   background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 0.5rem;
   padding: 0.5rem;
   cursor: pointer;
 }
@@ -76,7 +74,6 @@ form > button:disabled {
   display: flex;
   flex-direction: column;
   border: 1px solid #007bff;
-  border-radius: 0.5rem;
   margin-bottom: 0.5rem;
   padding: 1rem;
   font-size: 0.8rem;
@@ -124,7 +121,7 @@ form > button:disabled {
 }
 
 .team-info img {
-  height: 50px;
+  height: 24px;
   background-color: white;
 }
 
@@ -132,7 +129,6 @@ form > button:disabled {
   background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 0.5rem;
   padding: 0.5rem;
   cursor: pointer;
 }
@@ -140,13 +136,11 @@ form > button:disabled {
 .bet-form {
   display: flex;
   flex-direction: column;
-  border-radius: 0.5rem;
   gap: 0.5rem;
 }
 
 .bet-form input {
   padding: 0.5rem;
-  border-radius: 0.25rem;
   border: 1px solid #007bff;
 }
 
@@ -155,7 +149,6 @@ form > button:disabled {
   background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 0.25rem;
   padding: 0.5rem;
   cursor: pointer;
 }
@@ -176,8 +169,8 @@ form > button:disabled {
   align-items: center;
   height: 100%;
   border: 1px solid #007bff;
-  border-radius: 0.5rem;
   padding: 1rem;
+  font-size: 0.8rem;
 }
 
 .fixture-time,
@@ -225,39 +218,7 @@ form > button:disabled {
 
 /* Tables */
 
-table {
-  border-collapse: collapse;
-  width: 100%;
-  table-layout: auto;
-  border-radius: 0.5rem;
-  font-size: 0.8rem;
-  overflow-y: auto;
-  overflow-x: scroll;
-}
-
-th,
-td {
-  border: 1px solid #007bff;
-  padding: 0.5rem;
-  width: 1%;
-}
-
-th {
-  background-color: #007bff;
-  color: white;
-  text-align: left;
-}
-
-thead th:first-child {
-  border-top-left-radius: 0.5rem;
-}
-
-thead th:last-child {
-  border-top-right-radius: 0.5rem;
-}
-
-.bets-info,
-.standings table {
+.bets-info {
   margin-top: 0.5rem;
   border-collapse: collapse;
   border-style: hidden; /* hide standard table (collapsed) border */
@@ -265,12 +226,7 @@ thead th:last-child {
   overflow-x: scroll;
 }
 
-.standings table {
-  border-radius: 0.5rem;
-}
-
 .bets-info {
-  border-radius: 0.25rem;
 }
 
 .bets-info thead th:first-child {
@@ -281,19 +237,12 @@ thead th:last-child {
   border-top-right-radius: 0.25rem;
 }
 
-.standings table thead {
-  border-bottom: 1px solid #007bff;
-  border-top-left-radius: 0.5rem;
-  border-top-right-radius: 0.5rem;
-}
-
 .error-container {
   /* Bootstrap red background */
   background-color: red;
   color: white;
   text-align: center;
   display: none;
-  border-radius: 0.25rem;
   padding: 0.5rem;
 }
 
@@ -303,55 +252,83 @@ thead th:last-child {
   color: white;
   text-align: center;
   display: none;
-  border-radius: 0.25rem;
   padding: 0.5rem;
 }
 
-.last-5-matches {
-  /* Don't break when overflowing, scroll instead */
+/* Standings table */
+
+.table-container {
+  width: 100%;
   overflow-x: auto;
-  /* display: flex; */
-  gap: 0.5rem;
+  overflow-y: hidden;
+  position: relative;
 }
 
-.last-5-matches-points-5 {
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: white;
-  border-radius: 0.25rem;
-  padding: 0.25rem;
-  background-color: #28a745;
-  user-select: none;
-  text-align: center;
+table {
+  width: 100%;
+  border-collapse: collapse;
+  /* border-style: ; */
+  font-size: 0.8rem;
+  box-shadow: 0 0 0 1px #007bff;
 }
-.last-5-matches-points-3 {
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: white;
-  border-radius: 0.25rem;
-  padding: 0.25rem;
-  background-color: #ffc107;
-  user-select: none;
-  text-align: center;
+
+thead {
+  border-bottom: 1px solid #007bff;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
 }
-.last-5-matches-points-1 {
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: white;
-  border-radius: 0.25rem;
-  padding: 0.25rem;
+
+th,
+td {
+  padding: 0.5rem;
+  text-align: left;
+  border: 1px solid #007bff;
+  white-space: nowrap;
+}
+
+th {
   background-color: #007bff;
-  user-select: none;
-  text-align: center;
+  color: white;
 }
 
-.last-5-matches-points-0 {
-  font-size: 0.75rem;
-  font-weight: bold;
+/* Header */
+header {
+  display: flex;
+  flex-direction: row;
+  background-color: #007bff;
   color: white;
-  border-radius: 0.25rem;
-  padding: 0.25rem;
-  background-color: #dc3545;
-  user-select: none;
-  text-align: center;
+  width: 100%;
+  position: sticky;
+  justify-content: center;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding-block: 1rem;
+}
+
+header div.header-container {
+  display: inherit;
+  max-width: 768px;
+  align-items: center;
+  justify-content: space-between;
+  margin-inline: 1rem;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+header div.header-container a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+header div.header-container a:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+header div#header-right {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
 }
