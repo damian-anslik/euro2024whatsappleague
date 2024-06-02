@@ -138,6 +138,11 @@ def read_root(request: Request):
         return response
 
 
+@app_router.get("/rules")
+async def get_rules(request: Request):
+    return templates.TemplateResponse("rules.html", {"request": request})
+
+
 @app_router.get("/matches")
 async def get_matches():
     todays_date = datetime.datetime.now(datetime.UTC).today()
