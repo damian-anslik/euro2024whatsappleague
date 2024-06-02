@@ -17,7 +17,10 @@
             </div>
             <div id="header-right">
                 <a href="/rules">Rules</a>
+                <!-- If user has access token cookie -->
+                {% if request.cookies.get('access_token') %}
                 <a href="/logout">Logout</a>
+                {% endif %}
             </div>
         </div>
     </header>
