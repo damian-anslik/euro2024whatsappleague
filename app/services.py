@@ -405,6 +405,7 @@ def get_user_bets(user_id: int) -> list[dict]:
 
 def scheduled_update_function(date: datetime.datetime):
     leagues = leagues_table.select("*").execute().data
+    leagues = [league for league in leagues if league["update_matches"]]
     for league in leagues:
         try:
             update_match_data(
