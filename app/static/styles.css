@@ -18,9 +18,7 @@ main {
 
 .create-session-container {
   display: flex;
-  height: 100vh;
   flex-direction: column;
-  justify-content: center;
   padding: 1rem;
 }
 
