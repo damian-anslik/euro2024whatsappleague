@@ -112,7 +112,7 @@ def get_matches_for_given_date(
 ) -> list[dict]:
     response_data = (
         matches_table.select("*")
-        .gt(
+        .gte(
             "timestamp",
             datetime.datetime(
                 date.year, date.month, date.day, 0, 0, 0, tzinfo=datetime.UTC
