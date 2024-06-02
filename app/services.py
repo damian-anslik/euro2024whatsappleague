@@ -73,8 +73,12 @@ def get_matches_from_api(
         elif fixture_status in (
             extra_time_match_statuses + finished_in_extra_time_match_statuses
         ):
-            home_team_goals = fixture["score"]["fulltime"]["home"]
-            away_team_goals = fixture["score"]["fulltime"]["away"]
+            if fixture["score"]["extratime"]["home"] is None:
+                home_team_goals = fixture["goals"]["home"]
+                away_team_goals = fixture["goals"]["away"]
+            else:
+                home_team_goals = fixture["score"]["extratime"]["home"]
+                away_team_goals = fixture["score"]["extratime"]["away"]
         else:
             home_team_goals = fixture["goals"]["home"]
             away_team_goals = fixture["goals"]["away"]
