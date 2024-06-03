@@ -26,7 +26,7 @@
                         {% endif %}
                     </td>
                     <td class="last-5-matches">
-                        {% for points in user.points_in_last_n_finished_matches %}
+                        {% for points in user.points_in_last_n_finished_matches if points is not none %}
                         {{ points if points else 0}}
                         {% endfor %}
                     </td>
