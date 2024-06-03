@@ -113,12 +113,12 @@ def get_current_standings() -> list[dict]:
             )
             has_used_wildcard = bet["use_wildcard"]
             if fixture["status"] in finished_match_statuses:
-                user_points += app.services.calculate_points_for_bet(bet, fixture)
-                user_points *= 2 if has_used_wildcard else 1
+                match_points = app.services.calculate_points_for_bet(bet, fixture)
+                user_points += match_points * (2 if has_used_wildcard else 1)
             # If the fixture is ongoing, calculate the potential points the user can earn
             if bet["match_id"] in ongoing_matches:
-                potential_points += app.services.calculate_points_for_bet(bet, fixture)
-                potential_points *= 2 if has_used_wildcard else 1
+                match_points = app.services.calculate_points_for_bet(bet, fixture)
+                potential_points += match_points * (2 if has_used_wildcard else 1)
         points_in_last_n_finished_matches = []
         for match in last_n_finished_matches:
             bet = next(
