@@ -111,11 +111,14 @@ def get_current_standings() -> list[dict]:
             fixture = next(
                 fixture for fixture in matches if fixture["id"] == bet["match_id"]
             )
+            has_used_wildcard = bet["use_wildcard"]
             if fixture["status"] in finished_match_statuses:
                 user_points += app.services.calculate_points_for_bet(bet, fixture)
+                user_points *= 2 if has_used_wildcard else 1
             # If the fixture is ongoing, calculate the potential points the user can earn
             if bet["match_id"] in ongoing_matches:
                 potential_points += app.services.calculate_points_for_bet(bet, fixture)
+                potential_points *= 2 if has_used_wildcard else 1
         points_in_last_n_finished_matches = []
         for match in last_n_finished_matches:
             bet = next(
@@ -175,6 +178,7 @@ def create_user_match_prediction(
     match_id: str,
     predicted_home_goals: int,
     predicted_away_goals: int,
+    use_wildcard: bool = False,
 ) -> dict:
     match_data = matches_table.select("*").eq("id", match_id).execute().data[0]
     if not match_data["can_users_place_bets"]:
@@ -188,9 +192,10 @@ def create_user_match_prediction(
         match_data["can_users_place_bets"] = False
         matches_table.upsert([match_data]).execute()
         raise ValueError(
-            "Match about to start - user cannot place a bet on this fixture"
+            "Match has started - you can no longer place bets on this match"
         )
     bet_data = {
+        "use_wildcard": use_wildcard,
         "user_id": user_id,
         "match_id": match_id,
         "predicted_home_goals": predicted_home_goals,
@@ -204,12 +209,24 @@ def create_user_match_prediction(
         .execute()
         .data
     )
+    max_user_wildcards = config.getint("default", "max_number_wildcards")
+    user_used_wildcards = (
+        bets_table.select("*")
+        .eq("user_id", user_id)
+        .eq("use_wildcard", True)
+        .execute()
+        .data
+    )
+    if len(user_used_wildcards) >= max_user_wildcards and use_wildcard:
+        raise ValueError("You have already used all your point boosters")
     if user_already_made_prediction_for_match:
         predicted_scores_are_the_same = (
             user_already_made_prediction_for_match[0]["predicted_home_goals"]
             == predicted_home_goals
             and user_already_made_prediction_for_match[0]["predicted_away_goals"]
             == predicted_away_goals
+            and user_already_made_prediction_for_match[0]["use_wildcard"]
+            == use_wildcard
         )
         if predicted_scores_are_the_same:
             return user_already_made_prediction_for_match[0]
@@ -221,6 +238,18 @@ def create_user_match_prediction(
 def get_user_bets(user_id: int) -> list[dict]:
     user_bets = bets_table.select("*").eq("user_id", user_id).execute()
     return user_bets.data
+
+
+def get_number_of_wildcards_remaining(user_id: int) -> int:
+    max_user_wildcards = config.getint("default", "max_number_wildcards")
+    user_used_wildcards = (
+        bets_table.select("*")
+        .eq("user_id", user_id)
+        .eq("use_wildcard", True)
+        .execute()
+        .data
+    )
+    return max_user_wildcards - len(user_used_wildcards)
 
 
 if config.getboolean("scheduler", "enabled"):

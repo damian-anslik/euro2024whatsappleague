@@ -14,7 +14,12 @@ const getUserBets = async () => {
   return data;
 };
 
-const renderMatchDetails = (matchData, userMatchBet, isToday) => {
+const renderMatchDetails = (
+  matchData,
+  userMatchBet,
+  isToday,
+  numWildcardsRemaining
+) => {
   if (!matchData.show) {
     return;
   }
@@ -90,12 +95,43 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     awayTeamBet.placeholder = `Your Prediction for ${matchData.away_team_name}`;
     awayTeamBet.min = 0;
     awayTeamBet.required = true;
+    // Wildcard toggle
+    let wildcardToggle = document.createElement("input");
+    wildcardToggle.id = "wildcard-toggle";
+    wildcardToggle.type = "button";
+    wildcardToggle.name = "use_wildcard";
+    if (userBetData && userBetData.use_wildcard) {
+      wildcardToggle.value = "Point Booster Enabled";
+    } else {
+      if (numWildcardsRemaining === 0) {
+        wildcardToggle.value = "Point Booster Disabled (0 Remaining)";
+        wildcardToggle.disabled = true;
+      } else {
+        wildcardToggle.value = `Point Booster Disabled (${numWildcardsRemaining} Remaining)`;
+      }
+    }
+    wildcardToggle.onclick = () => {
+      if (
+        wildcardToggle.value ===
+        `Point Booster Disabled (${numWildcardsRemaining} Remaining)`
+      ) {
+        wildcardToggle.value = "Point Booster Enabled (Submit to confirm)";
+      } else if (
+        wildcardToggle.value === "Point Booster Enabled (Submit to confirm)"
+      ) {
+        wildcardToggle.value = `Point Booster Disabled (${numWildcardsRemaining} Remaining)`;
+      } else {
+        wildcardToggle.value = `Point Booster Disabled (Submit to confirm)`;
+      }
+    };
+    // Submit button
     let submit = document.createElement("button");
     submit.type = "submit";
     if (!canUserPlaceBets) {
       homeTeamBet.disabled = true;
       awayTeamBet.disabled = true;
       submit.disabled = true;
+      wildcardToggle.disabled = true;
       if (matchStatus === "FT") {
         submit.innerText = "Match Ended";
       } else {
@@ -121,32 +157,34 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
       errorContainer.style.display = "none";
       successContainer.style.display = "none";
       submit.innerText = "Submitting Prediction...";
-      fetch("/bets", {
+      let formData = new FormData(form);
+      formData.append(
+        "use_wildcard",
+        wildcardToggle.value === "Point Booster Enabled (Submit to confirm)"
+          ? 1
+          : 0
+      );
+      let response = await fetch("/bets", {
         method: "POST",
-        body: new FormData(form),
-      })
-        .then((response) => {
-          if (response.status === 500) {
-            throw new Error(
-              "You can no longer submit predictions for this match. Please refresh the page to see the latest scores."
-            );
-          }
-          return response.json();
-        })
-        .then((_) => {
-          successContainer.innerText = "Prediction Submitted Successfully";
-          successContainer.style.display = "block";
-          submit.innerText = "Update Prediction";
-          submit.disabled = false;
-        })
-        .catch((error) => {
-          errorContainer.style.display = "block";
-          errorContainer.innerText = error.message;
-        });
+        body: formData,
+      });
+      let responseData = await response.json();
+      if (response.status !== 200) {
+        errorContainer.style.display = "block";
+        errorContainer.innerText = responseData.detail;
+        submit.innerText = "Update Prediction";
+        submit.disabled = false;
+        return;
+      }
+      successContainer.innerText = "Prediction Submitted Successfully";
+      successContainer.style.display = "block";
+      submit.innerText = "Update Prediction";
+      submit.disabled = false;
     });
     form.appendChild(homeTeamBet);
     form.appendChild(awayTeamBet);
     form.appendChild(fixtureId);
+    form.appendChild(wildcardToggle);
     form.appendChild(submit);
     return form;
   };
@@ -233,6 +271,8 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
       }
     };
     fixtureInfo.appendChild(revealUserPredictionsButton);
+    let betsInfoContainer = document.createElement("div");
+    betsInfoContainer.classList.add("table-container");
     let betsInfoTable = document.createElement("table");
     betsInfoTable.classList.add("bets-info");
     let betsInfoTableHeader = document.createElement("tr");
@@ -242,9 +282,12 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
     homeGoalsHeader.innerText = "Predicted Home Goals";
     let awayGoalsHeader = document.createElement("th");
     awayGoalsHeader.innerText = "Predicted Away Goals";
+    let pointBoosterEnabledHeader = document.createElement("th");
+    pointBoosterEnabledHeader.innerText = "Point Booster Enabled";
     betsInfoTableHeader.appendChild(usernameHeader);
     betsInfoTableHeader.appendChild(homeGoalsHeader);
     betsInfoTableHeader.appendChild(awayGoalsHeader);
+    betsInfoTableHeader.appendChild(pointBoosterEnabledHeader);
     betsInfoTable.appendChild(betsInfoTableHeader);
     matchData.bets.forEach((bet) => {
       let betInfo = document.createElement("tr");
@@ -254,13 +297,17 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
       homeGoals.innerText = bet.predicted_home_goals;
       let awayGoals = document.createElement("td");
       awayGoals.innerText = bet.predicted_away_goals;
+      let pointBoosterEnabled = document.createElement("td");
+      pointBoosterEnabled.innerText = bet.use_wildcard ? "Yes" : "No";
       betInfo.appendChild(username);
       betInfo.appendChild(homeGoals);
       betInfo.appendChild(awayGoals);
+      betInfo.appendChild(pointBoosterEnabled);
       betsInfoTable.appendChild(betInfo);
     });
     betsInfoTable.style.display = "none";
-    fixtureInfo.appendChild(betsInfoTable);
+    betsInfoContainer.appendChild(betsInfoTable);
+    fixtureInfo.appendChild(betsInfoContainer);
   }
   if (isToday) {
     let fixtures = document.querySelector(".todays-fixtures");
@@ -272,11 +319,16 @@ const renderMatchDetails = (matchData, userMatchBet, isToday) => {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
-  let [matches, userBets] = await Promise.all([getMatches(), getUserBets()]);
+  let [matches, betsAndWildcardsRemaining] = await Promise.all([
+    getMatches(),
+    getUserBets(),
+  ]);
   let todaysMatches = matches.today;
   let todaysShownMatches = todaysMatches.filter((match) => match.show);
   let tomorrowsMatches = matches.tomorrow;
   let tomorrowsShownMatches = tomorrowsMatches.filter((match) => match.show);
+  let userBets = betsAndWildcardsRemaining.bets;
+  let wildcardsRemaining = betsAndWildcardsRemaining.num_wildcards_remaining;
   if (todaysShownMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
@@ -286,7 +338,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } else {
     todaysShownMatches.forEach((match) => {
       let matchBets = userBets.filter((bet) => bet.match_id === match.id);
-      renderMatchDetails(match, matchBets, true);
+      renderMatchDetails(match, matchBets, true, wildcardsRemaining);
     });
   }
   if (tomorrowsShownMatches.length === 0) {
@@ -298,7 +350,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } else {
     tomorrowsShownMatches.forEach((match) => {
       let matchBets = userBets.filter((bet) => bet.match_id === match.id);
-      renderMatchDetails(match, matchBets, false);
+      renderMatchDetails(match, matchBets, false, wildcardsRemaining);
     });
   }
   document.getElementsByClassName("todays-fixtures")[0].hidden = false;

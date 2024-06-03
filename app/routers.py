@@ -176,10 +176,21 @@ async def get_user_bets(request: Request):
     try:
         user_id = auth.check_user_session(access_token)
         user_bets = handlers.get_user_bets(user_id=user_id)
-        return user_bets
+        num_wildcards_remaining = handlers.get_number_of_wildcards_remaining(
+            user_id=user_id
+        )
+        return {
+            "bets": user_bets,
+            "num_wildcards_remaining": num_wildcards_remaining,
+        }
+    except ValueError as e:
+        logging.exception(e)
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.error(f"Error fetching user bets: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.exception(e)
+        raise HTTPException(
+            status_code=500, detail="Something went wrong. Please try again later."
+        )
 
 
 @app_router.post("/bets")
@@ -188,6 +199,7 @@ def place_bet(
     fixture_id: int = Form(...),
     home_goals: int = Form(...),
     away_goals: int = Form(...),
+    use_wildcard: bool = Form(False),
 ):
     access_token = request.cookies.get("access_token", None)
     if not access_token:
@@ -200,6 +212,7 @@ def place_bet(
             match_id=fixture_id,
             predicted_home_goals=home_goals,
             predicted_away_goals=away_goals,
+            use_wildcard=use_wildcard,
         )
         return updated_bet
     except Exception as e:

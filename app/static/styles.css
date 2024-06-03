@@ -152,7 +152,7 @@ form > button:disabled {
 }
 
 .show-bets-button {
-  margin-top: 0.5rem;
+  margin-block: 0.5rem;
 }
 
 .bet-form button:disabled {
@@ -215,25 +215,6 @@ form > button:disabled {
 }
 
 /* Tables */
-
-.bets-info {
-  margin-top: 0.5rem;
-  border-collapse: collapse;
-  border-style: hidden; /* hide standard table (collapsed) border */
-  box-shadow: 0 0 0 1px #007bff;
-  overflow-x: scroll;
-}
-
-.bets-info {
-}
-
-.bets-info thead th:first-child {
-  border-top-left-radius: 0.25rem;
-}
-
-.bets-info thead th:last-child {
-  border-top-right-radius: 0.25rem;
-}
 
 .error-container {
   /* Bootstrap red background */
