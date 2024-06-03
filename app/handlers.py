@@ -124,9 +124,10 @@ def get_current_standings() -> list[dict]:
             bet = next(
                 (bet for bet in user_bets if bet["match_id"] == match["id"]), None
             )
+            has_used_wildcard = bet["use_wildcard"]
             if bet:
                 points_in_last_n_finished_matches.append(
-                    app.services.calculate_points_for_bet(bet, match)
+                    app.services.calculate_points_for_bet(bet, match) * (2 if has_used_wildcard else 1)
                 )
             else:
                 points_in_last_n_finished_matches.append(None)
