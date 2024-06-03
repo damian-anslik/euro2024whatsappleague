@@ -4,6 +4,7 @@ import supabase
 from apscheduler.schedulers.background import BackgroundScheduler
 
 import configparser
+import functools
 import datetime
 import logging
 import os
@@ -283,3 +284,7 @@ def calculate_points_for_bet(bet_data: dict, match_data: dict) -> int:
     ):
         return 1
     return 0
+
+
+def list_users():
+    return supabase_client.auth.admin.list_users()

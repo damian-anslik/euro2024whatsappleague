@@ -175,10 +175,7 @@ async def get_user_bets(request: Request):
         return response
     try:
         user_id = auth.check_user_session(access_token)
-        user_bets = handlers.get_user_bets(user_id=user_id)
-        num_wildcards_remaining = handlers.get_number_of_wildcards_remaining(
-            user_id=user_id
-        )
+        user_bets, num_wildcards_remaining = handlers.get_user_bets(user_id=user_id)
         return {
             "bets": user_bets,
             "num_wildcards_remaining": num_wildcards_remaining,

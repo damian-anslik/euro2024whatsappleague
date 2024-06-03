@@ -40,6 +40,7 @@ finished_match_statuses = (
 def get_matches_for_given_date(
     date: datetime.datetime,
 ) -> list[dict]:
+    # TODO We can just do one call for two days, and the filter data locally, instead of two calls
     response_data = (
         matches_table.select("*")
         .gte(
@@ -87,61 +88,75 @@ def get_matches_for_given_date(
 
 
 def get_current_standings() -> list[dict]:
-    matches = (
-        matches_table.select("*").eq("show", True).order("timestamp").execute().data
+    matches_and_bets = (
+        matches_table.select("*, bets(*)")
+        .eq("show", True)
+        .order("timestamp")
+        .execute()
+        .data
     )
     SHOW_LAST_N_FINISHED_MATCHES = 5
     last_n_finished_matches = [
-        match for match in matches if match["status"] in finished_match_statuses
+        match
+        for match in matches_and_bets
+        if match["status"] in finished_match_statuses
     ][-SHOW_LAST_N_FINISHED_MATCHES:]
     ongoing_matches = [
-        match["id"] for match in matches if match["status"] in ongoing_match_statuses
+        match["id"]
+        for match in matches_and_bets
+        if match["status"] in ongoing_match_statuses
     ]
-    users = supabase_client.auth.admin.list_users()
-    bets = bets_table.select("*").execute().data
-    bets = [
-        bet for bet in bets if bet["match_id"] in [match["id"] for match in matches]
-    ]
-    standings = []
-    for user in users:
-        user_bets = [bet for bet in bets if bet["user_id"] == user.id]
-        user_points = 0
-        potential_points = 0
-        for bet in user_bets:
-            fixture = next(
-                fixture for fixture in matches if fixture["id"] == bet["match_id"]
-            )
+    users = app.services.list_users()
+    standings = {
+        user.id: {
+            "name": user.user_metadata["username"],
+            "points": 0,
+            "potential_points": 0,
+            "points_in_last_n_finished_matches": [None] * SHOW_LAST_N_FINISHED_MATCHES,
+        }
+        for user in users
+    }
+    for match in matches_and_bets:
+        match_status = match["status"]
+        if match_status in scheduled_match_statuses:
+            continue
+        bets = match["bets"]
+        if not bets:
+            continue
+        match_score = {
+            "home_team_goals": match["home_team_goals"],
+            "away_team_goals": match["away_team_goals"],
+        }
+        match_id = match["id"]
+        for bet in bets:
+            user_id = bet["user_id"]
             has_used_wildcard = bet["use_wildcard"]
-            if fixture["status"] in finished_match_statuses:
-                match_points = app.services.calculate_points_for_bet(bet, fixture)
-                user_points += match_points * (2 if has_used_wildcard else 1)
-            # If the fixture is ongoing, calculate the potential points the user can earn
-            if bet["match_id"] in ongoing_matches:
-                match_points = app.services.calculate_points_for_bet(bet, fixture)
-                potential_points += match_points * (2 if has_used_wildcard else 1)
-        points_in_last_n_finished_matches = []
-        for match in last_n_finished_matches:
-            bet = next(
-                (bet for bet in user_bets if bet["match_id"] == match["id"]), None
-            )
-            has_used_wildcard = bet["use_wildcard"]
-            if bet:
-                points_in_last_n_finished_matches.append(
-                    app.services.calculate_points_for_bet(bet, match) * (2 if has_used_wildcard else 1)
+            match_points = app.services.calculate_points_for_bet(bet, match_score)
+            if match_status in finished_match_statuses:
+                standings[user_id]["points"] += match_points * (
+                    2 if has_used_wildcard else 1
                 )
-            else:
-                points_in_last_n_finished_matches.append(None)
-        standings.append(
-            {
-                "user_id": user.id,
-                "name": user.user_metadata["username"],
-                "points": user_points,
-                "potential_points": (
-                    potential_points if len(ongoing_matches) != 0 else None
-                ),
-                "points_in_last_n_finished_matches": points_in_last_n_finished_matches,
-            }
-        )
+            if match_id in ongoing_matches:
+                standings[user_id]["potential_points"] += match_points * (
+                    2 if has_used_wildcard else 1
+                )
+            if match in last_n_finished_matches:
+                index = last_n_finished_matches.index(match)
+                standings[user_id]["points_in_last_n_finished_matches"][index] = (
+                    match_points * (2 if has_used_wildcard else 1)
+                )
+    standings = [
+        {
+            "user_id": user_id,
+            "name": standings[user_id]["name"],
+            "points": standings[user_id]["points"],
+            "potential_points": standings[user_id]["potential_points"],
+            "points_in_last_n_finished_matches": standings[user_id][
+                "points_in_last_n_finished_matches"
+            ],
+        }
+        for user_id in standings
+    ]
     # Sort the standings by points and then alphabetically by name
     standings.sort(key=lambda x: x["name"])
     standings.sort(
@@ -236,21 +251,12 @@ def create_user_match_prediction(
     return bet_creation_response.data[0]
 
 
-def get_user_bets(user_id: int) -> list[dict]:
-    user_bets = bets_table.select("*").eq("user_id", user_id).execute()
-    return user_bets.data
-
-
-def get_number_of_wildcards_remaining(user_id: int) -> int:
+def get_user_bets(user_id: int) -> tuple[list[dict], int]:
     max_user_wildcards = config.getint("default", "max_number_wildcards")
-    user_used_wildcards = (
-        bets_table.select("*")
-        .eq("user_id", user_id)
-        .eq("use_wildcard", True)
-        .execute()
-        .data
-    )
-    return max_user_wildcards - len(user_used_wildcards)
+    user_bets = bets_table.select("*").eq("user_id", user_id).execute()
+    user_wildcards_used = len([bet for bet in user_bets.data if bet["use_wildcard"]])
+    num_wildcards_remaining = max_user_wildcards - user_wildcards_used
+    return user_bets.data, num_wildcards_remaining
 
 
 if config.getboolean("scheduler", "enabled"):
