@@ -37,54 +37,64 @@ finished_match_statuses = (
 )
 
 
-def get_matches_for_given_date(
-    date: datetime.datetime,
-) -> list[dict]:
-    # TODO We can just do one call for two days, and the filter data locally, instead of two calls
+def get_matches_handler(
+    start_date: datetime.datetime, num_days_in_future: int = 1
+) -> dict[str, list[dict]]:
+    future_date = start_date + datetime.timedelta(days=num_days_in_future)
     response_data = (
-        matches_table.select("*")
+        matches_table.select("*, bets(*)")
         .gte(
             "timestamp",
             datetime.datetime(
-                date.year, date.month, date.day, 0, 0, 0, tzinfo=datetime.UTC
+                start_date.year,
+                start_date.month,
+                start_date.day,
+                0,
+                0,
+                0,
+                tzinfo=datetime.UTC,
             ).isoformat(),
         )
         .lt(
             "timestamp",
             datetime.datetime(
-                date.year, date.month, date.day, 23, 59, 59, tzinfo=datetime.UTC
+                future_date.year,
+                future_date.month,
+                future_date.day,
+                23,
+                59,
+                59,
+                tzinfo=datetime.UTC,
             ).isoformat(),
         )
         .order("timestamp")
         .execute()
         .data
     )
-    response_data = sorted(
-        response_data,
-        key=lambda x: x["status"] not in finished_match_statuses,
-        reverse=True,
-    )
-    ongoing_or_finished_matches = [
-        match["id"] for match in response_data if not match["can_users_place_bets"]
-    ]
-    if ongoing_or_finished_matches:
-        users = supabase_client.auth.admin.list_users()
-        users_data = {user.id: user.user_metadata["username"] for user in users}
-        user_bets = (
-            bets_table.select("*")
-            .in_("match_id", ongoing_or_finished_matches)
-            .execute()
-            .data
-        )
-        for bet in user_bets:
-            user_id = bet["user_id"]
-            bet["user"] = {"name": users_data[user_id]}
-        # Add the bets on the ongoing matches to the response data
-        for match in response_data:
-            match_bets = [bet for bet in user_bets if bet["match_id"] == match["id"]]
-            match_bets.sort(key=lambda x: x["user"]["name"])
-            match["bets"] = match_bets
-    return response_data
+    users = supabase_client.auth.admin.list_users()
+    user_id_to_username_map = {
+        user.id: user.user_metadata["username"] for user in users
+    }
+    todays_matches = []
+    future_matches = []
+    for match in response_data:
+        match_date = datetime.datetime.fromisoformat(match["timestamp"])
+        if match_date.date() == start_date.date():
+            can_users_place_bets = match["can_users_place_bets"]
+            if can_users_place_bets:
+                match["bets"] = []
+            else:
+                for bet in match["bets"]:
+                    user_id = bet["user_id"]
+                    bet["user"] = {"name": user_id_to_username_map[user_id]}
+            todays_matches.append(match)
+        else:
+            match["bets"] = []
+            future_matches.append(match)
+    return {
+        "today": todays_matches,
+        "tomorrow": future_matches,
+    }
 
 
 def get_current_standings() -> list[dict]:

@@ -145,26 +145,10 @@ async def get_rules(request: Request):
 
 @app_router.get("/matches")
 async def get_matches():
-    todays_date = datetime.datetime.now(datetime.UTC).today()
-    tomorrows_date = todays_date + datetime.timedelta(days=1)
-    todays_matches = handlers.get_matches_for_given_date(
-        date=datetime.datetime(
-            todays_date.year,
-            todays_date.month,
-            todays_date.day,
-        ),
+    matches = handlers.get_matches_handler(
+        start_date=datetime.datetime.now(datetime.UTC).today()
     )
-    tomorrows_matches = handlers.get_matches_for_given_date(
-        date=datetime.datetime(
-            tomorrows_date.year,
-            tomorrows_date.month,
-            tomorrows_date.day,
-        ),
-    )
-    return {
-        "today": todays_matches,
-        "tomorrow": tomorrows_matches,
-    }
+    return matches
 
 
 @app_router.get("/bets")
