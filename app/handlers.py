@@ -91,6 +91,22 @@ def get_matches_handler(
         else:
             match["bets"] = []
             future_matches.append(match)
+    # Sort matches by start time
+    todays_matches.sort(key=lambda x: x["timestamp"])
+    future_matches.sort(key=lambda x: x["timestamp"])
+    # For todays matches, show ongoing matches first, then scheduled matches, finally finished matches
+    todays_scheduled_matches = [
+        match for match in todays_matches if match["status"] in scheduled_match_statuses
+    ]
+    todays_ongoing_matches = [
+        match for match in todays_matches if match["status"] in ongoing_match_statuses
+    ]
+    todays_finished_matches = [
+        match for match in todays_matches if match["status"] in finished_match_statuses
+    ]
+    todays_matches = (
+        todays_ongoing_matches + todays_scheduled_matches + todays_finished_matches
+    )
     return {
         "today": todays_matches,
         "tomorrow": future_matches,
