@@ -43,6 +43,7 @@ def get_matches_handler(
     future_date = start_date + datetime.timedelta(days=num_days_in_future)
     response_data = (
         matches_table.select("*, bets(*)")
+        .eq("show", True)
         .gte(
             "timestamp",
             datetime.datetime(
@@ -85,8 +86,7 @@ def get_matches_handler(
                 match["bets"] = []
             else:
                 for bet in match["bets"]:
-                    user_id = bet["user_id"]
-                    bet["user"] = {"name": user_id_to_username_map[user_id]}
+                    bet["user"] = {"name": user_id_to_username_map[bet["user_id"]]}
             todays_matches.append(match)
         else:
             match["bets"] = []
@@ -225,11 +225,9 @@ def create_user_match_prediction(
     match_data = matches_table.select("*").eq("id", match_id).execute().data[0]
     if not match_data["can_users_place_bets"]:
         raise ValueError("User cannot place a bet on this fixture")
-    # Check if there is less than 5 minutes left for the match to start
     if (
         datetime.datetime.now(datetime.UTC).timestamp()
-        - datetime.datetime.fromisoformat(match_data["timestamp"]).timestamp()
-        > 5 * 60
+        >= datetime.datetime.fromisoformat(match_data["timestamp"]).timestamp()
     ):
         match_data["can_users_place_bets"] = False
         matches_table.upsert([match_data]).execute()
@@ -283,6 +281,13 @@ def get_user_bets(user_id: int) -> tuple[list[dict], int]:
     user_wildcards_used = len([bet for bet in user_bets.data if bet["use_wildcard"]])
     num_wildcards_remaining = max_user_wildcards - user_wildcards_used
     return user_bets.data, num_wildcards_remaining
+
+
+def update_user_name(user_id: str, new_username: str) -> dict:
+    user = supabase_client.auth.admin.update_user_by_id(
+        uid=user_id, attributes={"user_metadata": {"username": new_username}}
+    )
+    return user
 
 
 if config.getboolean("scheduler", "enabled"):

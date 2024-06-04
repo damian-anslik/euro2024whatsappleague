@@ -134,8 +134,7 @@ def get_matches_from_api(
 
 
 def scheduled_update_function(date: datetime.datetime):
-    leagues = leagues_table.select("*").execute().data
-    leagues = [league for league in leagues if league["update_matches"]]
+    leagues = leagues_table.select("*").eq("update_matches", True).execute().data
     for league in leagues:
         try:
             update_match_data(
@@ -165,13 +164,13 @@ def configure_scheduler(update_interval_minutes: int = 5):
         trigger="cron",
         minute=f"*/{update_interval_minutes+1}",
     )
-    scheduler.add_job(
-        func=lambda: scheduled_update_function(
-            datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=2),
-        ),
-        trigger="cron",
-        minute=f"*/{update_interval_minutes+2}",
-    )
+    # scheduler.add_job(
+    #     func=lambda: scheduled_update_function(
+    #         datetime.datetime.now(datetime.UTC).today() + datetime.timedelta(days=2),
+    #     ),
+    #     trigger="cron",
+    #     minute=f"*/{update_interval_minutes+2}",
+    # )
     scheduler.start()
 
 
@@ -196,7 +195,7 @@ def update_match_data(
         matches_table.select("*")
         .eq("league_id", league_id)
         .eq("season", season)
-        .gt("timestamp", start_of_day.isoformat())
+        .gte("timestamp", start_of_day.isoformat())
         .lt("timestamp", end_of_day.isoformat())
         .order("timestamp")
         .execute()
