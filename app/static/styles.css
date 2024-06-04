@@ -270,6 +270,42 @@ th {
   color: white;
 }
 
+.matches {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.matches span {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: red;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  color: white;
+  font-weight: bold;
+}
+
+span#correct-score {
+  background-color: #28a745;
+}
+
+span#correct-margin {
+  background-color: #007bff;
+}
+
+span#correct-winner {
+  background-color: orange;
+}
+
+span#incorrect {
+  background-color: lightgray;
+}
+
 /* Header */
 header {
   display: flex;

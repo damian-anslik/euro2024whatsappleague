@@ -25,10 +25,15 @@
                         (+{{ user.potential_points}})
                         {% endif %}
                     </td>
-                    <td class="last-5-matches">
-                        {% for points in user.points_in_last_n_finished_matches if points is not none %}
-                        {{ points if points else 0}}
-                        {% endfor %}
+                    <td>
+                        <div class="matches">
+                            {% for points in user.points_in_last_n_finished_matches %}
+                            <span id={{"incorrect" if not points else "correct-score" if points in [5, 10]
+                                else "correct-margin" if points in [3, 6] else "correct-winner" if points in [1, 2] }}>
+                                {{ points if points else 0}}
+                            </span>
+                            {% endfor %}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
