@@ -17,6 +17,12 @@ def list_users():
     return users_in_db
 
 
+def check_user_session(access_token: str) -> str:
+    decoded_token = supabase_client.auth._decode_jwt(access_token)
+    user_id = decoded_token["sub"]
+    return user_id
+
+
 def signup(email: str, username: str, password: str) -> str:
     try:
         # Check username is available
@@ -51,12 +57,6 @@ def login(email: str, password: str) -> str:
         return access_token
     except gotrue.errors.AuthApiError as e:
         raise ValueError(e)
-
-
-def check_user_session(access_token: str) -> str:
-    decoded_token = supabase_client.auth._decode_jwt(access_token)
-    user_id = decoded_token["sub"]
-    return user_id
 
 
 def send_password_reset_request(email: str):

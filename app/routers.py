@@ -145,9 +145,8 @@ async def get_rules(request: Request):
 
 @app_router.get("/matches")
 async def get_matches():
-    matches = handlers.get_matches_handler(
-        start_date=datetime.datetime.now(datetime.UTC).today()
-    )
+    start_date = datetime.datetime.now(datetime.UTC).today().date()
+    matches = handlers.get_matches_handler(start_date=start_date)
     return matches
 
 
