@@ -2,10 +2,12 @@ import supabase
 
 import configparser
 import datetime
-import datetime
+import functools
+import timeit
 import os
 
 import app.services
+import app.auth
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -72,7 +74,7 @@ def get_matches_handler(
         .execute()
         .data
     )
-    users = supabase_client.auth.admin.list_users()
+    users = app.auth.list_users()
     user_id_to_username_map = {
         user.id: user.user_metadata["username"] for user in users
     }
@@ -114,6 +116,7 @@ def get_matches_handler(
 
 
 def get_current_standings() -> list[dict]:
+    start_time = timeit.default_timer()
     matches_and_bets = (
         matches_table.select("*, bets(*)")
         .eq("show", True)
@@ -121,6 +124,7 @@ def get_current_standings() -> list[dict]:
         .execute()
         .data
     )
+    time_to_get_matches_and_bets = timeit.default_timer() - start_time
     SHOW_LAST_N_FINISHED_MATCHES = 5
     last_n_finished_matches = [
         match
@@ -132,7 +136,7 @@ def get_current_standings() -> list[dict]:
         for match in matches_and_bets
         if match["status"] in ongoing_match_statuses
     ]
-    users = app.services.list_users()
+    users = app.auth.list_users()
     standings = {
         user.id: {
             "name": user.user_metadata["username"],
@@ -183,6 +187,7 @@ def get_current_standings() -> list[dict]:
         }
         for user_id in standings
     ]
+    time_to_calculate_points = timeit.default_timer() - start_time
     # Sort the standings by points and then alphabetically by name
     standings.sort(key=lambda x: x["name"])
     standings.sort(
@@ -212,7 +217,20 @@ def get_current_standings() -> list[dict]:
             else:
                 current_rank += 1
                 user["rank"] = current_rank
+    time_to_rank_users = timeit.default_timer() - start_time
+    print(
+        f"Time to get matches and bets: {time_to_get_matches_and_bets} seconds, Time to calculate points: {time_to_calculate_points} seconds, Time to rank users: {time_to_rank_users} seconds"
+    )
     return standings
+
+
+@functools.lru_cache(maxsize=20)
+def get_user_bets(user_id: int) -> tuple[list[dict], int]:
+    max_user_wildcards = config.getint("default", "max_number_wildcards")
+    user_bets = bets_table.select("*").eq("user_id", user_id).execute()
+    user_wildcards_used = len([bet for bet in user_bets.data if bet["use_wildcard"]])
+    num_wildcards_remaining = max_user_wildcards - user_wildcards_used
+    return user_bets.data, num_wildcards_remaining
 
 
 def create_user_match_prediction(
@@ -272,15 +290,8 @@ def create_user_match_prediction(
             return user_already_made_prediction_for_match[0]
         bet_data.update({"id": user_already_made_prediction_for_match[0]["id"]})
     bet_creation_response = bets_table.upsert(bet_data).execute()
+    get_user_bets.cache_clear()
     return bet_creation_response.data[0]
-
-
-def get_user_bets(user_id: int) -> tuple[list[dict], int]:
-    max_user_wildcards = config.getint("default", "max_number_wildcards")
-    user_bets = bets_table.select("*").eq("user_id", user_id).execute()
-    user_wildcards_used = len([bet for bet in user_bets.data if bet["use_wildcard"]])
-    num_wildcards_remaining = max_user_wildcards - user_wildcards_used
-    return user_bets.data, num_wildcards_remaining
 
 
 def update_user_name(user_id: str, new_username: str) -> dict:

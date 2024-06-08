@@ -285,5 +285,11 @@ def calculate_points_for_bet(bet_data: dict, match_data: dict) -> int:
     return 0
 
 
-def list_users():
-    return supabase_client.auth.admin.list_users()
+def change_user_username(user_id: str, new_username: str):
+    return supabase_client.auth.admin.update_user_by_id(
+        uid=user_id, attributes={"user_metadata": {"username": new_username}}
+    )
+
+
+if __name__ == "__main__":
+    change_user_username(user_id="", new_username="")
