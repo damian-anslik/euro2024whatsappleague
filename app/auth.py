@@ -1,6 +1,7 @@
 import supabase
 import gotrue.errors
 
+import functools
 import os
 
 
@@ -8,6 +9,12 @@ supabase_client = supabase.create_client(
     supabase_key=os.getenv("SUPABASE_KEY"),
     supabase_url=os.getenv("SUPABASE_URL"),
 )
+
+
+@functools.lru_cache(maxsize=1)
+def list_users():
+    users_in_db = supabase_client.auth.admin.list_users()
+    return users_in_db
 
 
 def signup(email: str, username: str, password: str) -> str:
@@ -29,6 +36,7 @@ def signup(email: str, username: str, password: str) -> str:
             }
         )
         access_token = signup_response.session.access_token
+        list_users.cache_clear()  # Clear the list users cache when new user signs up
         return access_token
     except gotrue.errors.AuthApiError as e:
         raise ValueError(e)
