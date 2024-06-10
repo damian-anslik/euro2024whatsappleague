@@ -120,7 +120,12 @@ const renderMatchDetails = (
         wildcardToggle.value === "Point Booster Enabled (Submit to confirm)"
       ) {
         wildcardToggle.value = `Point Booster Disabled (${numWildcardsRemaining} Remaining)`;
-      } else {
+      } else if (
+        wildcardToggle.value === "Point Booster Disabled (Submit to confirm)"
+      ) {
+        wildcardToggle.value = `Point Booster Enabled`;
+      } 
+      else {
         wildcardToggle.value = `Point Booster Disabled (Submit to confirm)`;
       }
     };
@@ -160,7 +165,7 @@ const renderMatchDetails = (
       let formData = new FormData(form);
       formData.append(
         "use_wildcard",
-        wildcardToggle.value === "Point Booster Enabled (Submit to confirm)"
+        wildcardToggle.value.includes("Point Booster Enabled")
           ? 1
           : 0
       );
