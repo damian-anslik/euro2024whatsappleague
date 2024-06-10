@@ -52,6 +52,16 @@ main {
   cursor: pointer;
 }
 
+.historical-data a {
+  display: block;
+  text-align: center;
+  padding: 0.5rem;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  font-size: 0.8rem;
+}
+
 form {
   display: flex;
   flex-direction: column;

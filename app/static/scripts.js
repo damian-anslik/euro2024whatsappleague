@@ -104,7 +104,7 @@ const renderMatchDetails = (
       wildcardToggle.value = "Double Points Enabled";
     } else {
       wildcardToggle.value = `Double Points Disabled (${numWildcardsRemaining} Remaining)`;
-      wildcardToggle.disabled = (numWildcardsRemaining === 0)
+      wildcardToggle.disabled = numWildcardsRemaining === 0;
     }
     wildcardToggle.onclick = () => {
       if (
@@ -120,8 +120,7 @@ const renderMatchDetails = (
         wildcardToggle.value === "Double Points Disabled (Submit to confirm)"
       ) {
         wildcardToggle.value = `Double Points Enabled`;
-      } 
-      else {
+      } else {
         wildcardToggle.value = `Double Points Disabled (Submit to confirm)`;
       }
     };
@@ -161,9 +160,7 @@ const renderMatchDetails = (
       let formData = new FormData(form);
       formData.append(
         "use_wildcard",
-        wildcardToggle.value.includes("Double Points Enabled")
-          ? 1
-          : 0
+        wildcardToggle.value.includes("Double Points Enabled") ? 1 : 0
       );
       let response = await fetch("/bets", {
         method: "POST",
@@ -356,5 +353,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   document.getElementsByClassName("todays-fixtures")[0].hidden = false;
   document.getElementsByClassName("tomorrows-fixtures")[0].hidden = false;
+  document.getElementsByClassName("historical-data")[0].hidden = false;
   document.getElementsByClassName("loading-indicator-container")[0].remove();
 });

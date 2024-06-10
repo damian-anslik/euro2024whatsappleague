@@ -579,6 +579,24 @@ def update_user_name(user_id: str, new_username: str) -> dict:
     return user
 
 
+def download_historical_data() -> dict:
+    historical_matches_and_bets = (
+        matches_table.select("*, bets(*)")
+        .eq("show", True)
+        .eq("can_users_place_bets", False)
+        .order("timestamp")
+        .execute()
+    )
+    users = app.auth.list_users()
+    user_id_to_username_map = {
+        user.id: user.user_metadata["username"] for user in users
+    }
+    for match in historical_matches_and_bets.data:
+        for bet in match["bets"]:
+            bet["user"] = {"name": user_id_to_username_map[bet["user_id"]]}
+    return historical_matches_and_bets.data
+
+
 if config.getboolean("scheduler", "enabled"):
     configure_scheduler(
         update_interval_minutes=config.getint("scheduler", "update_interval_minutes")

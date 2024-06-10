@@ -198,3 +198,8 @@ def place_bet(
     except Exception as e:
         logging.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app_router.get("/historical-data")
+def download_historical_data():
+    return handlers.download_historical_data()
