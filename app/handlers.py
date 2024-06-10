@@ -374,6 +374,7 @@ def get_current_standings() -> list[dict]:
             "points": 0,
             "potential_points": 0,
             "points_in_last_n_finished_matches": [None] * SHOW_LAST_N_FINISHED_MATCHES,
+            "num_wildcards_remaining": config.getint("default", "max_number_wildcards"),
         }
         for user in users
     }
@@ -392,6 +393,8 @@ def get_current_standings() -> list[dict]:
         for bet in bets:
             user_id = bet["user_id"]
             has_used_wildcard = bet["use_wildcard"]
+            if has_used_wildcard:
+                standings[user_id]["num_wildcards_remaining"] -= 1
             match_points = calculate_points_for_bet(bet, match_score)
             if match_status in finished_match_statuses:
                 standings[user_id]["points"] += match_points * (
@@ -415,6 +418,7 @@ def get_current_standings() -> list[dict]:
             "points_in_last_n_finished_matches": standings[user_id][
                 "points_in_last_n_finished_matches"
             ],
+            "num_wildcards_remaining": standings[user_id]["num_wildcards_remaining"],
         }
         for user_id in standings
     ]
@@ -452,6 +456,7 @@ def get_current_standings() -> list[dict]:
     print(
         f"Time to get matches and bets: {time_to_get_matches_and_bets} seconds, Time to calculate points: {time_to_calculate_points} seconds, Time to rank users: {time_to_rank_users} seconds"
     )
+    print(standings)
     return standings
 
 

@@ -12,6 +12,7 @@
                     <th>Name</th>
                     <th>Points</th>
                     <th>Last 5 Matches</th>
+                    <th>DPs Remaining</th>
                 </tr>
             </thead>
             <tbody>
@@ -35,6 +36,7 @@
                             {% endfor %}
                         </div>
                     </td>
+                    <td>{{user.num_wildcards_remaining}}</td>
                 </tr>
                 {% endfor %}
             </tbody>
