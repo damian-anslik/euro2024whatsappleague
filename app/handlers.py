@@ -484,46 +484,87 @@ def create_user_match_prediction(
         raise ValueError(
             "Match has started - you can no longer place bets on this match"
         )
-    bet_data = {
-        "use_wildcard": use_wildcard,
-        "user_id": user_id,
-        "match_id": match_id,
-        "predicted_home_goals": predicted_home_goals,
-        "predicted_away_goals": predicted_away_goals,
-        "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
-    }
-    user_already_made_prediction_for_match = (
+    existing_user_prediction = (
         bets_table.select("*")
         .eq("user_id", user_id)
         .eq("match_id", match_id)
         .execute()
         .data
     )
-    max_user_wildcards = config.getint("default", "max_number_wildcards")
-    user_used_wildcards = (
+    max_num_wildcards = config.getint("default", "max_number_wildcards")
+    user_bets_with_wildcards = (
         bets_table.select("*")
         .eq("user_id", user_id)
         .eq("use_wildcard", True)
         .execute()
         .data
     )
-    if len(user_used_wildcards) >= max_user_wildcards and use_wildcard:
-        raise ValueError("You have already used all your point boosters")
-    if user_already_made_prediction_for_match:
-        predicted_scores_are_the_same = (
-            user_already_made_prediction_for_match[0]["predicted_home_goals"]
-            == predicted_home_goals
-            and user_already_made_prediction_for_match[0]["predicted_away_goals"]
-            == predicted_away_goals
-            and user_already_made_prediction_for_match[0]["use_wildcard"]
-            == use_wildcard
+    if not existing_user_prediction:
+        # If the user has not made a prediction for this match, we will create a new prediction
+        # First check if the user has used all their wildcards, if they have, we will not allow them to use a wildcard
+        num_remaining_wildcards = max_num_wildcards - len(user_bets_with_wildcards)
+        if use_wildcard and num_remaining_wildcards == 0:
+            raise ValueError("You have used all your point boosters")
+        # Otherwise, we will create a new prediction
+        bet_data = {
+            "use_wildcard": use_wildcard,
+            "user_id": user_id,
+            "match_id": match_id,
+            "predicted_home_goals": predicted_home_goals,
+            "predicted_away_goals": predicted_away_goals,
+            "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+        }
+        bet_creation_response = bets_table.upsert(bet_data).execute()
+        get_user_bets.cache_clear()
+        return bet_creation_response.data[0]
+    # No need to update the prediction if the user has already made the same prediction
+    scores_are_same = (
+        existing_user_prediction[0]["predicted_home_goals"] == predicted_home_goals
+        and existing_user_prediction[0]["predicted_away_goals"] == predicted_away_goals
+    )
+    if scores_are_same:
+        if existing_user_prediction[0]["use_wildcard"] == use_wildcard:
+            return existing_user_prediction[0]
+        # If the user has changed their mind about using a wildcard, we will update the prediction
+        # Check if the user has used all their wildcards, if they have, we will not allow them to use a wildcard
+        num_remaining_wildcards = max_num_wildcards - len(user_bets_with_wildcards)
+        if use_wildcard and num_remaining_wildcards == 0:
+            raise ValueError("You have used all your point boosters")
+        bet_data = {
+            "use_wildcard": use_wildcard,
+            "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+        }
+        updated_bet = (
+            bets_table.update(bet_data)
+            .eq("id", existing_user_prediction[0]["id"])
+            .execute()
+            .data[0]
         )
-        if predicted_scores_are_the_same:
-            return user_already_made_prediction_for_match[0]
-        bet_data.update({"id": user_already_made_prediction_for_match[0]["id"]})
-    bet_creation_response = bets_table.upsert(bet_data).execute()
+        get_user_bets.cache_clear()
+        return updated_bet
+    # Handle case where the scores are different, and the user may have changed their mind about using a wildcard
+    is_match_one_of_wildcard_matches = match_id in [
+        bet["match_id"] for bet in user_bets_with_wildcards
+    ]
+    num_remaining_wildcards = max_num_wildcards - len(user_bets_with_wildcards)
+    if is_match_one_of_wildcard_matches:
+        num_remaining_wildcards += 1
+    if use_wildcard and num_remaining_wildcards == 0:
+        raise ValueError("You have used all your point boosters")
+    bet_data = {
+        "use_wildcard": use_wildcard,
+        "predicted_home_goals": predicted_home_goals,
+        "predicted_away_goals": predicted_away_goals,
+        "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+    }
+    updated_bet = (
+        bets_table.update(bet_data)
+        .eq("id", existing_user_prediction[0]["id"])
+        .execute()
+        .data[0]
+    )
     get_user_bets.cache_clear()
-    return bet_creation_response.data[0]
+    return updated_bet
 
 
 def update_user_name(user_id: str, new_username: str) -> dict:
