@@ -101,32 +101,28 @@ const renderMatchDetails = (
     wildcardToggle.type = "button";
     wildcardToggle.name = "use_wildcard";
     if (userBetData && userBetData.use_wildcard) {
-      wildcardToggle.value = "Point Booster Enabled";
+      wildcardToggle.value = "Double Points Enabled";
     } else {
-      if (numWildcardsRemaining === 0) {
-        wildcardToggle.value = "Point Booster Disabled (0 Remaining)";
-        wildcardToggle.disabled = true;
-      } else {
-        wildcardToggle.value = `Point Booster Disabled (${numWildcardsRemaining} Remaining)`;
-      }
+      wildcardToggle.value = `Double Points Disabled (${numWildcardsRemaining} Remaining)`;
+      wildcardToggle.disabled = (numWildcardsRemaining === 0)
     }
     wildcardToggle.onclick = () => {
       if (
         wildcardToggle.value ===
-        `Point Booster Disabled (${numWildcardsRemaining} Remaining)`
+        `Double Points Disabled (${numWildcardsRemaining} Remaining)`
       ) {
-        wildcardToggle.value = "Point Booster Enabled (Submit to confirm)";
+        wildcardToggle.value = "Double Points Enabled (Submit to confirm)";
       } else if (
-        wildcardToggle.value === "Point Booster Enabled (Submit to confirm)"
+        wildcardToggle.value === "Double Points Enabled (Submit to confirm)"
       ) {
-        wildcardToggle.value = `Point Booster Disabled (${numWildcardsRemaining} Remaining)`;
+        wildcardToggle.value = `Double Points Disabled (${numWildcardsRemaining} Remaining)`;
       } else if (
-        wildcardToggle.value === "Point Booster Disabled (Submit to confirm)"
+        wildcardToggle.value === "Double Points Disabled (Submit to confirm)"
       ) {
-        wildcardToggle.value = `Point Booster Enabled`;
+        wildcardToggle.value = `Double Points Enabled`;
       } 
       else {
-        wildcardToggle.value = `Point Booster Disabled (Submit to confirm)`;
+        wildcardToggle.value = `Double Points Disabled (Submit to confirm)`;
       }
     };
     // Submit button
@@ -165,7 +161,7 @@ const renderMatchDetails = (
       let formData = new FormData(form);
       formData.append(
         "use_wildcard",
-        wildcardToggle.value.includes("Point Booster Enabled")
+        wildcardToggle.value.includes("Double Points Enabled")
           ? 1
           : 0
       );
@@ -288,7 +284,7 @@ const renderMatchDetails = (
     let awayGoalsHeader = document.createElement("th");
     awayGoalsHeader.innerText = "Predicted Away Goals";
     let pointBoosterEnabledHeader = document.createElement("th");
-    pointBoosterEnabledHeader.innerText = "Point Booster Enabled";
+    pointBoosterEnabledHeader.innerText = "Double Points Enabled";
     betsInfoTableHeader.appendChild(usernameHeader);
     betsInfoTableHeader.appendChild(homeGoalsHeader);
     betsInfoTableHeader.appendChild(awayGoalsHeader);
