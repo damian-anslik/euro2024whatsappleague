@@ -6,6 +6,7 @@ body {
   min-height: 100vh;
   align-items: center;
   overflow-y: scroll;
+  color: #2b2c36;
 }
 
 main {
@@ -41,11 +42,11 @@ main {
 
 .login-form .form-group input {
   padding: 0.5rem;
-  border: 1px solid #007bff;
+  border: 1px solid #004ea0;
 }
 
 .login-form button {
-  background-color: #007bff;
+  background-color: #004ea0;
   color: white;
   border: none;
   padding: 0.5rem;
@@ -56,7 +57,7 @@ main {
   display: block;
   text-align: center;
   padding: 0.5rem;
-  background-color: #007bff;
+  background-color: #004ea0;
   color: white;
   text-decoration: none;
   font-size: 0.8rem;
@@ -81,7 +82,7 @@ form > button:disabled {
 .fixture-info {
   display: flex;
   flex-direction: column;
-  border: 1px solid #007bff;
+  border: 1px solid #004ea0;
   margin-bottom: 0.5rem;
   padding: 1rem;
   font-size: 0.8rem;
@@ -89,7 +90,7 @@ form > button:disabled {
 
 .fixture-info.ongoing {
   opacity: 0.75;
-  border: 1px solid #007bff;
+  border: 1px solid #004ea0;
 }
 
 .fixture-info.disabled {
@@ -129,12 +130,12 @@ form > button:disabled {
 }
 
 .team-info img {
-  height: 24px;
+  height: 2rem;
   background-color: white;
 }
 
 .bet-button {
-  background-color: #007bff;
+  background-color: #004ea0;
   color: white;
   border: none;
   padding: 0.5rem;
@@ -149,12 +150,12 @@ form > button:disabled {
 
 .bet-form input {
   padding: 0.5rem;
-  border: 1px solid #007bff;
+  border: 1px solid #004ea0;
 }
 
 .bet-form button,
 .show-bets-button {
-  background-color: #007bff;
+  background-color: #004ea0;
   color: white;
   border: none;
   padding: 0.5rem;
@@ -176,7 +177,7 @@ form > button:disabled {
   justify-content: center;
   align-items: center;
   height: 100%;
-  border: 1px solid #007bff;
+  border: 1px solid #004ea0;
   padding: 1rem;
   font-size: 0.8rem;
 }
@@ -228,7 +229,7 @@ form > button:disabled {
 
 .error-container {
   /* Bootstrap red background */
-  background-color: red;
+  background-color: #e4010b;
   color: white;
   text-align: center;
   display: none;
@@ -237,7 +238,7 @@ form > button:disabled {
 
 .success-container {
   /* Bootstrap green background */
-  background-color: #28a745;
+  background-color: #00a85d;
   color: white;
   text-align: center;
   display: none;
@@ -259,11 +260,11 @@ table {
   border-collapse: collapse;
   /* border-style: ; */
   font-size: 0.8rem;
-  box-shadow: 0 0 0 1px #007bff;
+  box-shadow: 0 0 0 1px #004ea0;
 }
 
 thead {
-  border-bottom: 1px solid #007bff;
+  border-bottom: 1px solid #004ea0;
   border-top-left-radius: 0.5rem;
   border-top-right-radius: 0.5rem;
 }
@@ -272,12 +273,12 @@ th,
 td {
   padding: 0.5rem;
   text-align: left;
-  border: 1px solid #007bff;
+  border: 1px solid #004ea0;
   white-space: nowrap;
 }
 
 th {
-  background-color: #007bff;
+  background-color: #004ea0;
   color: white;
 }
 
@@ -302,11 +303,11 @@ th {
 }
 
 span#correct-score {
-  background-color: #28a745;
+  background-color: #00a85d;
 }
 
 span#correct-margin {
-  background-color: #007bff;
+  background-color: #004ea0;
 }
 
 span#correct-winner {
@@ -321,7 +322,7 @@ span#incorrect {
 header {
   display: flex;
   flex-direction: row;
-  background-color: #007bff;
+  background-color: #004ea0;
   color: white;
   width: 100%;
   position: sticky;
@@ -330,6 +331,7 @@ header {
   z-index: 2;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding-block: 1rem;
+  font-size: 1rem;
 }
 
 header div.header-container {
@@ -357,4 +359,8 @@ header div#header-right {
   display: flex;
   flex-direction: row;
   gap: 1rem;
+}
+
+#wildcard-toggle:disabled {
+  border: 1px solid #ccc;
 }
