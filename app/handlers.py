@@ -200,6 +200,14 @@ def update_match_data(
             if match_in_db["id"] == match["id"]
         )
         match["show"] = match_in_db["show"]
+        # Don't update the match if it's already finished
+        if match["status"] in finished_in_regular_time_match_statuses:
+            continue
+        # Don't update the match if there is a discrepancy in the status (API returns NS, but match is ongoing)
+        if match["status"] in scheduled_match_statuses and match_in_db["status"] in (
+            ongoing_match_statuses + finished_match_statuses
+        ):
+            continue
         updated_data.append(match)
     logging.info(f"Updated data for league_id={league_id}: {updated_data}")
     get_matches_handler.cache_clear()
