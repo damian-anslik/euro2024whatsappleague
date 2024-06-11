@@ -200,6 +200,14 @@ def update_match_data(
             if match_in_db["id"] == match["id"]
         )
         match["show"] = match_in_db["show"]
+        # Don't update the match in DB already has status finished
+        if match_in_db["status"] in finished_match_statuses:
+            continue
+        # Don't update the match if there is a discrepancy in the status (API returns NS, but match is ongoing)
+        if match["status"] in scheduled_match_statuses and match_in_db["status"] in (
+            ongoing_match_statuses + finished_match_statuses
+        ):
+            continue
         updated_data.append(match)
     logging.info(f"Updated data for league_id={league_id}: {updated_data}")
     get_matches_handler.cache_clear()
@@ -358,7 +366,6 @@ def get_current_standings() -> list[dict]:
         .execute()
         .data
     )
-    time_to_get_matches_and_bets = timeit.default_timer() - start_time
     SHOW_LAST_N_FINISHED_MATCHES = 5
     last_n_finished_matches = [
         match
