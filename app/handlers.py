@@ -68,7 +68,7 @@ def get_matches_from_api(
     )
     response = requests.get(url, headers=headers, params=querystring)
     response_data = response.json()["response"]
-    for fixture in response_data:
+    for i, fixture in enumerate(response_data):
         fixture_status = fixture["fixture"]["status"]["short"]
         can_user_place_bet = fixture_status in scheduled_match_statuses
         if fixture_status in special_match_statuses:
@@ -111,7 +111,10 @@ def get_matches_from_api(
                 "away_team_logo": away_team_logo,
                 "home_team_goals": home_team_goals,
                 "away_team_goals": away_team_goals,
-                "updated_at": datetime.datetime.now(datetime.UTC).isoformat(),
+                "updated_at": (
+                    datetime.datetime.now(datetime.UTC)
+                    + datetime.timedelta(microseconds=i)
+                ).isoformat(),  # Add a small delay to ensure that the matches are sorted correctly in case of same timestamp
                 "show": False,
             }
         )
@@ -349,6 +352,7 @@ def get_matches_handler(
     todays_finished_matches = [
         match for match in todays_matches if match["status"] in finished_match_statuses
     ]
+    todays_finished_matches.sort(key=lambda x: x["updated_at"])
     todays_matches = (
         todays_ongoing_matches + todays_scheduled_matches + todays_finished_matches
     )
@@ -370,7 +374,7 @@ def get_current_standings() -> list[dict]:
     SHOW_LAST_N_FINISHED_MATCHES = 5
     last_n_finished_matches = [
         match
-        for match in matches_and_bets
+        for match in sorted(matches_and_bets, key=lambda x: x["updated_at"])
         if match["status"] in finished_match_statuses
     ][-SHOW_LAST_N_FINISHED_MATCHES:]
     ongoing_matches = [
