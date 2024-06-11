@@ -364,3 +364,7 @@ header div#header-right {
 #wildcard-toggle:disabled {
   border: 1px solid #ccc;
 }
+
+.download-button {
+  margin-bottom: 1rem;
+}

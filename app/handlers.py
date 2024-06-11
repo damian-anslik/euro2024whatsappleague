@@ -1,12 +1,15 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 import supabase
 import requests
+import pandas
 
 import configparser
 import functools
 import datetime
 import logging
 import timeit
+import copy
+import io
 import os
 
 # import app.services
@@ -422,7 +425,6 @@ def get_current_standings() -> list[dict]:
         }
         for user_id in standings
     ]
-    time_to_calculate_points = timeit.default_timer() - start_time
     # Sort the standings by points and then alphabetically by name
     standings.sort(key=lambda x: x["name"])
     standings.sort(
@@ -452,11 +454,6 @@ def get_current_standings() -> list[dict]:
             else:
                 current_rank += 1
                 user["rank"] = current_rank
-    time_to_rank_users = timeit.default_timer() - start_time
-    print(
-        f"Time to get matches and bets: {time_to_get_matches_and_bets} seconds, Time to calculate points: {time_to_calculate_points} seconds, Time to rank users: {time_to_rank_users} seconds"
-    )
-    print(standings)
     return standings
 
 
@@ -579,7 +576,27 @@ def update_user_name(user_id: str, new_username: str) -> dict:
     return user
 
 
-def download_historical_data() -> dict:
+def convert_json_to_excel(data: dict) -> io.BytesIO:
+    matches = []
+    bets = []
+    for match_and_bet in data:
+        match_bets = match_and_bet["bets"]
+        bets.extend(match_bets)
+        # Match data is everything except the bets
+        match_data = copy.deepcopy(match_and_bet)
+        del match_data["bets"]
+        matches.append(match_data)
+    matches_df = pandas.DataFrame(matches)
+    bets_df = pandas.DataFrame(bets)
+    output = io.BytesIO()
+    with pandas.ExcelWriter(output, engine="openpyxl") as writer:
+        matches_df.to_excel(writer, sheet_name="matches", index=False)
+        bets_df.to_excel(writer, sheet_name="bets", index=False)
+    output.seek(0)
+    return output
+
+
+def download_historical_data(is_excel: bool = False) -> dict | io.BytesIO:
     historical_matches_and_bets = (
         matches_table.select("*, bets(*)")
         .eq("show", True)
@@ -593,7 +610,9 @@ def download_historical_data() -> dict:
     }
     for match in historical_matches_and_bets.data:
         for bet in match["bets"]:
-            bet["user"] = {"name": user_id_to_username_map[bet["user_id"]]}
+            bet["username"] = user_id_to_username_map[bet["user_id"]]
+    if is_excel:
+        return convert_json_to_excel(historical_matches_and_bets.data)
     return historical_matches_and_bets.data
 
 

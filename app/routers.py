@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Form, status, HTTPException, Depends
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 
 import datetime
 import logging
@@ -201,5 +201,15 @@ def place_bet(
 
 
 @app_router.get("/historical-data")
-def download_historical_data():
-    return handlers.download_historical_data()
+def download_historical_data(is_excel: bool = False):
+    data = handlers.download_historical_data(is_excel=is_excel)
+    if is_excel:
+        headers = {
+            "Content-Disposition": f"attachment; filename=historical_data.xlsx",
+        }
+        return Response(
+            content=data.read(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers=headers,
+        )
+    return data
