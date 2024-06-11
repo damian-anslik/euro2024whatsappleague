@@ -330,6 +330,8 @@ def get_matches_handler(
             else:
                 for bet in match["bets"]:
                     bet["user"] = {"name": user_id_to_username_map[bet["user_id"]]}
+                # Sort match bets alphabetically by username
+                match["bets"].sort(key=lambda x: x["user"]["name"])
             todays_matches.append(match)
         else:
             match["bets"] = []
@@ -358,7 +360,6 @@ def get_matches_handler(
 
 @functools.lru_cache(maxsize=1)
 def get_current_standings() -> list[dict]:
-    start_time = timeit.default_timer()
     matches_and_bets = (
         matches_table.select("*, bets(*)")
         .eq("show", True)
