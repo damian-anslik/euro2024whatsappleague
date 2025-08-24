@@ -8,10 +8,13 @@ import logging
 from app import handlers, auth
 
 app_router = APIRouter()
+auth_router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
+# Authentication Routes
 
-@app_router.get("/signup")
+
+@auth_router.get("/signup")
 def signup_form(request: Request):
     # Redirect to home if user is already logged in
     access_token = request.cookies.get("access_token", None)
@@ -21,18 +24,13 @@ def signup_form(request: Request):
     return templates.TemplateResponse("signup.html", {"request": request})
 
 
-@app_router.post("/signup")
+@auth_router.post("/signup")
 def signup(
     email: str = Form(...), username: str = Form(...), password: str = Form(...)
 ):
     try:
-        access_token = auth.signup(email, username, password)
-        response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            expires=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365),
-        )
+        auth.signup(email, username, password)
+        response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
         return response
     except ValueError as e:
         logging.error(f"Error creating user: {e}")
@@ -44,7 +42,7 @@ def signup(
         )
 
 
-@app_router.get("/login")
+@auth_router.get("/login")
 def login_form(request: Request):
     # Redirect to home if user is already logged in
     access_token = request.cookies.get("access_token", None)
@@ -54,7 +52,7 @@ def login_form(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 
-@app_router.post("/login")
+@auth_router.post("/login")
 def login(email: str = Form(...), password: str = Form(...)):
     try:
         access_token = auth.login(email=email, password=password)
@@ -75,19 +73,19 @@ def login(email: str = Form(...), password: str = Form(...)):
         )
 
 
-@app_router.get("/logout")
+@auth_router.get("/logout")
 def logout(_: Request):
     response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     response.delete_cookie("access_token")
     return response
 
 
-@app_router.get("/reset-password")
+@auth_router.get("/reset-password")
 def reset_password_form(request: Request):
     return templates.TemplateResponse("reset-password.html", {"request": request})
 
 
-@app_router.post("/reset-password")
+@auth_router.post("/reset-password")
 def reset_password(email: str = Form(...)):
     try:
         auth.send_password_reset_request(email)
@@ -97,12 +95,12 @@ def reset_password(email: str = Form(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app_router.get("/change-password")
+@auth_router.get("/change-password")
 def change_password_form(request: Request):
     return templates.TemplateResponse("change-password.html", {"request": request})
 
 
-@app_router.post("/change-password")
+@auth_router.post("/change-password")
 def change_password(password: str = Form(...), token: str = Form(...)):
     try:
         user_id = auth.check_user_session(token)
@@ -113,6 +111,9 @@ def change_password(password: str = Form(...), token: str = Form(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Application Routes
+
+
 @app_router.get("/")
 def read_root(request: Request):
     access_token = request.cookies.get("access_token", None)
@@ -121,7 +122,7 @@ def read_root(request: Request):
         return response
     try:
         _ = auth.check_user_session(access_token)
-        league_standings = handlers.get_current_standings()
+        league_standings = handlers.calculate_current_standings()
         response = templates.TemplateResponse(
             "index.html",
             {
@@ -145,8 +146,7 @@ async def get_rules(request: Request):
 
 @app_router.get("/matches")
 async def get_matches():
-    start_date = datetime.datetime.now(datetime.UTC).today().date()
-    matches = handlers.get_matches_handler(start_date=start_date)
+    matches = handlers.get_matches_handler()
     return matches
 
 
@@ -158,10 +158,9 @@ async def get_user_bets(request: Request):
         return response
     try:
         user_id = auth.check_user_session(access_token)
-        user_bets, num_wildcards_remaining = handlers.get_user_bets(user_id=user_id)
+        user_bets = handlers.get_user_bets_handler(user_id=user_id)
         return {
             "bets": user_bets,
-            "num_wildcards_remaining": num_wildcards_remaining,
         }
     except ValueError as e:
         logging.exception(e)
@@ -179,7 +178,6 @@ def place_bet(
     fixture_id: int = Form(...),
     home_goals: int = Form(...),
     away_goals: int = Form(...),
-    use_wildcard: bool = Form(False),
 ):
     access_token = request.cookies.get("access_token", None)
     if not access_token:
@@ -187,12 +185,11 @@ def place_bet(
         return response
     try:
         user_id = auth.check_user_session(access_token)
-        updated_bet = handlers.create_user_match_prediction(
+        updated_bet = handlers.insert_bet(
             user_id=user_id,
             match_id=fixture_id,
             predicted_home_goals=home_goals,
             predicted_away_goals=away_goals,
-            use_wildcard=use_wildcard,
         )
         return updated_bet
     except Exception as e:
@@ -200,16 +197,16 @@ def place_bet(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app_router.get("/historical-data")
-def download_historical_data(is_excel: bool = False):
-    data = handlers.download_historical_data(is_excel=is_excel)
-    if is_excel:
-        headers = {
-            "Content-Disposition": f"attachment; filename=historical_data.xlsx",
-        }
-        return Response(
-            content=data.read(),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers=headers,
-        )
-    return data
+# @app_router.get("/historical-data")
+# def download_historical_data(is_excel: bool = False):
+#     data = handlers.download_historical_data(is_excel=is_excel)
+#     if is_excel:
+#         headers = {
+#             "Content-Disposition": f"attachment; filename=historical_data.xlsx",
+#         }
+#         return Response(
+#             content=data.read(),
+#             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+#             headers=headers,
+#         )
+#     return data

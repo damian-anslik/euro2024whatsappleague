@@ -14,12 +14,7 @@ const getUserBets = async () => {
   return data;
 };
 
-const renderMatchDetails = (
-  matchData,
-  userMatchBet,
-  isToday,
-  numWildcardsRemaining
-) => {
+const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
   if (!matchData.show) {
     return;
   }
@@ -96,34 +91,34 @@ const renderMatchDetails = (
     awayTeamBet.min = 0;
     awayTeamBet.required = true;
     // Wildcard toggle
-    let wildcardToggle = document.createElement("input");
-    wildcardToggle.id = "wildcard-toggle";
-    wildcardToggle.type = "button";
-    wildcardToggle.name = "use_wildcard";
-    if (userBetData && userBetData.use_wildcard) {
-      wildcardToggle.value = "Double Points Enabled";
-    } else {
-      wildcardToggle.value = `Double Points Disabled (${numWildcardsRemaining} Remaining)`;
-      wildcardToggle.disabled = numWildcardsRemaining === 0;
-    }
-    wildcardToggle.onclick = () => {
-      if (
-        wildcardToggle.value ===
-        `Double Points Disabled (${numWildcardsRemaining} Remaining)`
-      ) {
-        wildcardToggle.value = "Double Points Enabled (Submit to confirm)";
-      } else if (
-        wildcardToggle.value === "Double Points Enabled (Submit to confirm)"
-      ) {
-        wildcardToggle.value = `Double Points Disabled (${numWildcardsRemaining} Remaining)`;
-      } else if (
-        wildcardToggle.value === "Double Points Disabled (Submit to confirm)"
-      ) {
-        wildcardToggle.value = `Double Points Enabled`;
-      } else {
-        wildcardToggle.value = `Double Points Disabled (Submit to confirm)`;
-      }
-    };
+    // let wildcardToggle = document.createElement("input");
+    // wildcardToggle.id = "wildcard-toggle";
+    // wildcardToggle.type = "button";
+    // wildcardToggle.name = "use_wildcard";
+    // if (userBetData && userBetData.use_wildcard) {
+    //   wildcardToggle.value = "Double Points Enabled";
+    // } else {
+    //   wildcardToggle.value = `Double Points Disabled (${numWildcardsRemaining} Remaining)`;
+    //   wildcardToggle.disabled = numWildcardsRemaining === 0;
+    // }
+    // wildcardToggle.onclick = () => {
+    //   if (
+    //     wildcardToggle.value ===
+    //     `Double Points Disabled (${numWildcardsRemaining} Remaining)`
+    //   ) {
+    //     wildcardToggle.value = "Double Points Enabled (Submit to confirm)";
+    //   } else if (
+    //     wildcardToggle.value === "Double Points Enabled (Submit to confirm)"
+    //   ) {
+    //     wildcardToggle.value = `Double Points Disabled (${numWildcardsRemaining} Remaining)`;
+    //   } else if (
+    //     wildcardToggle.value === "Double Points Disabled (Submit to confirm)"
+    //   ) {
+    //     wildcardToggle.value = `Double Points Enabled`;
+    //   } else {
+    //     wildcardToggle.value = `Double Points Disabled (Submit to confirm)`;
+    //   }
+    // };
     // Submit button
     let submit = document.createElement("button");
     submit.type = "submit";
@@ -131,7 +126,7 @@ const renderMatchDetails = (
       homeTeamBet.disabled = true;
       awayTeamBet.disabled = true;
       submit.disabled = true;
-      wildcardToggle.disabled = true;
+      // wildcardToggle.disabled = true;
       if (matchStatus === "FT") {
         submit.innerText = "Match Ended";
       } else {
@@ -158,10 +153,10 @@ const renderMatchDetails = (
       successContainer.style.display = "none";
       submit.innerText = "Submitting Prediction...";
       let formData = new FormData(form);
-      formData.append(
-        "use_wildcard",
-        wildcardToggle.value.includes("Double Points Enabled") ? 1 : 0
-      );
+      // formData.append(
+      //   "use_wildcard",
+      //   wildcardToggle.value.includes("Double Points Enabled") ? 1 : 0
+      // );
       let response = await fetch("/bets", {
         method: "POST",
         body: formData,
@@ -182,7 +177,7 @@ const renderMatchDetails = (
     form.appendChild(homeTeamBet);
     form.appendChild(awayTeamBet);
     form.appendChild(fixtureId);
-    form.appendChild(wildcardToggle);
+    // form.appendChild(wildcardToggle);
     form.appendChild(submit);
     return form;
   };
@@ -203,15 +198,16 @@ const renderMatchDetails = (
   }
   let fixtureTime = document.createElement("span");
   fixtureTime.classList.add("fixture-time");
-  let timestamp = new Date(matchData.timestamp).getTime();
+  let timestamp = new Date(matchData.start_time).getTime();
   fixtureTime.innerText = {
     TBD: "Time To Be Decided",
-    NS:
-      (isToday ? "Today " : "Tomorrow ") +
-      new Date(timestamp).toLocaleString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+    NS: new Date(timestamp).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
     "1H": "First Half",
     HT: "Half Time",
     "2H": "Second Half",
@@ -229,11 +225,11 @@ const renderMatchDetails = (
   // Show information about the teams
   let homeTeamInfo = createTeamDetailsElement(
     matchData.home_team_name,
-    matchData.home_team_logo
+    matchData.home_team_logo_url
   );
   let awayTeamInfo = createTeamDetailsElement(
     matchData.away_team_name,
-    matchData.away_team_logo
+    matchData.away_team_logo_url
   );
   let teamDivider = createDividerElement(
     matchData.home_team_goals,
@@ -280,12 +276,12 @@ const renderMatchDetails = (
     homeGoalsHeader.innerText = "Predicted Home Goals";
     let awayGoalsHeader = document.createElement("th");
     awayGoalsHeader.innerText = "Predicted Away Goals";
-    let pointBoosterEnabledHeader = document.createElement("th");
-    pointBoosterEnabledHeader.innerText = "Double Points Enabled";
+    // let pointBoosterEnabledHeader = document.createElement("th");
+    // pointBoosterEnabledHeader.innerText = "Double Points Enabled";
     betsInfoTableHeader.appendChild(usernameHeader);
     betsInfoTableHeader.appendChild(homeGoalsHeader);
     betsInfoTableHeader.appendChild(awayGoalsHeader);
-    betsInfoTableHeader.appendChild(pointBoosterEnabledHeader);
+    // betsInfoTableHeader.appendChild(pointBoosterEnabledHeader);
     betsInfoTable.appendChild(betsInfoTableHeader);
     matchData.bets.forEach((bet) => {
       let betInfo = document.createElement("tr");
@@ -295,25 +291,25 @@ const renderMatchDetails = (
       homeGoals.innerText = bet.predicted_home_goals;
       let awayGoals = document.createElement("td");
       awayGoals.innerText = bet.predicted_away_goals;
-      let pointBoosterEnabled = document.createElement("td");
-      pointBoosterEnabled.innerText = bet.use_wildcard ? "Yes" : "No";
+      // let pointBoosterEnabled = document.createElement("td");
+      // pointBoosterEnabled.innerText = bet.use_wildcard ? "Yes" : "No";
       betInfo.appendChild(username);
       betInfo.appendChild(homeGoals);
       betInfo.appendChild(awayGoals);
-      betInfo.appendChild(pointBoosterEnabled);
+      // betInfo.appendChild(pointBoosterEnabled);
       betsInfoTable.appendChild(betInfo);
     });
     betsInfoTable.style.display = "none";
     betsInfoContainer.appendChild(betsInfoTable);
     fixtureInfo.appendChild(betsInfoContainer);
   }
-  if (isToday) {
-    let fixtures = document.querySelector(".todays-fixtures");
-    fixtures.appendChild(fixtureInfo);
-  } else {
-    let fixtures = document.querySelector(".tomorrows-fixtures");
-    fixtures.appendChild(fixtureInfo);
-  }
+  let selector = isUpcoming
+    ? ".upcoming-fixtures"
+    : isOngoing
+    ? ".ongoing-fixtures"
+    : ".finished-fixtures";
+  let fixtures = document.querySelector(selector);
+  fixtures.appendChild(fixtureInfo);
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -321,38 +317,50 @@ document.addEventListener("DOMContentLoaded", async () => {
     getMatches(),
     getUserBets(),
   ]);
-  let todaysMatches = matches.today;
-  let todaysShownMatches = todaysMatches.filter((match) => match.show);
-  let tomorrowsMatches = matches.tomorrow;
-  let tomorrowsShownMatches = tomorrowsMatches.filter((match) => match.show);
+  console.log(matches);
+  let ongoingMatches = matches.ongoing;
+  let upcomingMatches = matches.upcoming;
+  let finishedMatches = matches.finished;
   let userBets = betsAndWildcardsRemaining.bets;
-  let wildcardsRemaining = betsAndWildcardsRemaining.num_wildcards_remaining;
-  if (todaysShownMatches.length === 0) {
+  // let wildcardsRemaining = betsAndWildcardsRemaining.num_wildcards_remaining;
+  if (ongoingMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
     noMatches.innerText = "No matches available at the moment";
-    let fixtures = document.querySelector(".todays-fixtures");
+    let fixtures = document.querySelector(".ongoing-fixtures");
     fixtures.appendChild(noMatches);
   } else {
-    todaysShownMatches.forEach((match) => {
+    ongoingMatches.forEach((match) => {
       let matchBets = userBets.filter((bet) => bet.match_id === match.id);
-      renderMatchDetails(match, matchBets, true, wildcardsRemaining);
+      renderMatchDetails(match, matchBets, true, false);
     });
   }
-  if (tomorrowsShownMatches.length === 0) {
+  if (upcomingMatches.length === 0) {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
     noMatches.innerText = "No matches available at the moment";
-    let fixtures = document.querySelector(".tomorrows-fixtures");
+    let fixtures = document.querySelector(".ongoing-fixtures");
     fixtures.appendChild(noMatches);
   } else {
-    tomorrowsShownMatches.forEach((match) => {
+    upcomingMatches.forEach((match) => {
       let matchBets = userBets.filter((bet) => bet.match_id === match.id);
-      renderMatchDetails(match, matchBets, false, wildcardsRemaining);
+      renderMatchDetails(match, matchBets, false, true);
     });
   }
-  document.getElementsByClassName("todays-fixtures")[0].hidden = false;
-  document.getElementsByClassName("tomorrows-fixtures")[0].hidden = false;
-  document.getElementsByClassName("historical-data")[0].hidden = false;
+  if (finishedMatches.length === 0) {
+    let noMatches = document.createElement("p");
+    noMatches.classList.add("no-matches");
+    noMatches.innerText = "No matches available at the moment";
+    let fixtures = document.querySelector(".ongoing-fixtures");
+    fixtures.appendChild(noMatches);
+  } else {
+    finishedMatches.forEach((match) => {
+      let matchBets = userBets.filter((bet) => bet.match_id === match.id);
+      renderMatchDetails(match, matchBets, false, false);
+    });
+  }
+  document.getElementsByClassName("ongoing-fixtures")[0].hidden = false;
+  document.getElementsByClassName("upcoming-fixtures")[0].hidden = false;
+  document.getElementsByClassName("finished-fixtures")[0].hidden = false;
   document.getElementsByClassName("loading-indicator-container")[0].remove();
 });

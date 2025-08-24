@@ -34,16 +34,13 @@ def signup(email: str, username: str, password: str) -> str:
         )
         if is_username_taken:
             raise ValueError("Username is already taken")
-        signup_response = supabase_client.auth.sign_up(
+        supabase_client.auth.sign_up(
             {
                 "email": email,
                 "password": password,
                 "options": {"data": {"username": username}},
             }
         )
-        access_token = signup_response.session.access_token
-        list_users.cache_clear()  # Clear the list users cache when new user signs up
-        return access_token
     except gotrue.errors.AuthApiError as e:
         raise ValueError(e)
 
