@@ -9,6 +9,7 @@ from app import handlers, auth
 
 app_router = APIRouter()
 auth_router = APIRouter()
+admin_router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 # Authentication Routes
@@ -197,16 +198,10 @@ def place_bet(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# @app_router.get("/historical-data")
-# def download_historical_data(is_excel: bool = False):
-#     data = handlers.download_historical_data(is_excel=is_excel)
-#     if is_excel:
-#         headers = {
-#             "Content-Disposition": f"attachment; filename=historical_data.xlsx",
-#         }
-#         return Response(
-#             content=data.read(),
-#             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#             headers=headers,
-#         )
-#     return data
+# Admin Routes
+
+
+@admin_router.get("/fixtures/update")
+def update_fixtures(request: Request):
+    update_response = handlers.upsert_fixtures()
+    return {"updated_fixtures": update_response}

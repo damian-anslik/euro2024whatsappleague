@@ -4,6 +4,7 @@ import requests
 import dotenv
 import postgrest.exceptions
 
+from datetime import datetime, timedelta, timezone
 import configparser
 import logging
 import os
@@ -100,6 +101,7 @@ def upsert_fixtures():
     # Get a list of all of the leagues we are tracking
     tracked_leagues = leagues_table.select("*").eq("update_matches", True).execute()
     # For each league, download the fixtures for the current season and upsert them into the database
+    all_upserted_fixtures = []
     for league in tracked_leagues.data:
         newly_downloaded_league_fixture = download_fixtures_for_league(
             league_id=league["league_id"], season=league["season"]
@@ -107,7 +109,11 @@ def upsert_fixtures():
         # Add the foreign key to league.id field
         for fixture in newly_downloaded_league_fixture:
             fixture["league_id"] = league["id"]
-        matches_table.upsert_multiple(newly_downloaded_league_fixture, on_conflict="id")
+        upsert_response = matches_table.upsert(
+            newly_downloaded_league_fixture, on_conflict="id"
+        ).execute()
+        all_upserted_fixtures.extend(upsert_response.data)
+    return all_upserted_fixtures
 
 
 def calculate_bet_points(
@@ -297,12 +303,23 @@ def get_matches_handler() -> dict[str, list[dict]]:
         .execute()
         .data
     )
+    # List all users
+    users = list_all_users()
+    # Remove bets from upcoming matches so that users cannot see other users' bets before a match starts
     upcoming_matches = [
         match
         for match in matches_and_bets
         if match["status"] in scheduled_match_statuses
     ]
-    # Remove bets from upcoming matches so that users cannot see other users' bets before a match starts
+    # Filter out upcoming matches that are more than 48 hours in the future
+    SHOW_MATCHES_N_HOURS_AHEAD = 24 * 7
+    now = datetime.now(timezone.utc)
+    upcoming_matches = [
+        match
+        for match in upcoming_matches
+        if datetime.fromisoformat(match["start_time"])
+        <= now + timedelta(hours=SHOW_MATCHES_N_HOURS_AHEAD)
+    ]
     for match in upcoming_matches:
         match.pop("bets", None)
     # Sort upcoming matches by start_time ascending and then alphabetically by home_team_name
@@ -311,19 +328,29 @@ def get_matches_handler() -> dict[str, list[dict]]:
     ongoing_matches = [
         match for match in matches_and_bets if match["status"] in ongoing_match_statuses
     ]
+    for match in ongoing_matches:
+        if "bets" not in match:
+            continue
+        for bet in match["bets"]:
+            bet["user"] = {"name": users.get(bet["user_id"], "User: " + bet["user_id"])}
+    # Sort finished matches by start_time descending
     finished_matches = [
         match
         for match in matches_and_bets
         if match["status"] in finished_match_statuses
     ]
-    # Sort finished matches by start_time descending
+    for match in finished_matches:
+        if "bets" not in match:
+            continue
+        for bet in match["bets"]:
+            bet["user"] = {"name": users.get(bet["user_id"], "User: " + bet["user_id"])}
     finished_matches.sort(key=lambda x: x["start_time"], reverse=True)
     SHOW_LAST_N_FINISHED_MATCHES = 10
     if len(finished_matches) > SHOW_LAST_N_FINISHED_MATCHES:
         finished_matches = finished_matches[:SHOW_LAST_N_FINISHED_MATCHES]
     return {
-        "upcoming": upcoming_matches,
         "ongoing": ongoing_matches,
+        "upcoming": upcoming_matches,
         "finished": finished_matches,
     }
 
