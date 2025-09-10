@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euro 2024 Whatsapp League</title>
+    <title>Champions League Whatsapp League</title>
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="icon" type="image/png" href="/static/favicon.ico">
 </head>
@@ -13,10 +13,10 @@
     <header>
         <div class="header-container">
             <div id="header-left">
-                <a href="/">Euro 2024 Whatsapp League</a>
+                <a href="/">Champions League Whatsapp League</a>
             </div>
             <div id="header-right">
-                <a href="/rules">Rules</a>
+                <!-- <a href="/rules">Rules</a> -->
                 <!-- If user has access token cookie -->
                 {% if request.cookies.get('access_token') %}
                 <a href="/logout">Logout</a>
@@ -28,6 +28,40 @@
         {% block content %}
         {% endblock %}
     </main>
-</body>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const audio = new Audio("/static/Champions_League_anthem.ogg.mp3");
+
+            const btn = document.createElement("img");
+            btn.src = "/static/uefa-champions-league-seeklogo.png";
+            btn.alt = "Play Anthem";
+            btn.style.position = "fixed";
+            btn.style.bottom = "20px";
+            btn.style.right = "20px";
+            btn.style.cursor = "pointer";
+            btn.style.zIndex = "1000";
+            btn.style.opacity = "0.5";
+            btn.title = "Play/Pause Champions League Anthem";
+            btn.style.width = "50px";   // adjust size
+
+
+            document.body.appendChild(btn);
+
+            btn.addEventListener("click", () => {
+                if (!audio.paused) {
+                    audio.pause();
+                    btn.style.opacity = "0.5";
+                } else {
+                    audio.play();
+                    btn.style.opacity = "1.0";
+                }
+            });
+
+            // If the audio ends, reset the button opacity
+            audio.addEventListener("ended", () => {
+                btn.style.opacity = "0.5";
+            });
+        });
+    </script>
 
 </html>

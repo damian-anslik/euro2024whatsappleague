@@ -42,11 +42,11 @@ main {
 
 .login-form .form-group input {
   padding: 0.5rem;
-  border: 1px solid #004ea0;
+  border: 1px solid #0e1e5b;
 }
 
 .login-form button {
-  background-color: #004ea0;
+  background-color: #0e1e5b;
   color: white;
   border: none;
   padding: 0.5rem;
@@ -57,7 +57,7 @@ main {
   display: block;
   text-align: center;
   padding: 0.5rem;
-  background-color: #004ea0;
+  background-color: #0e1e5b;
   color: white;
   text-decoration: none;
   font-size: 0.8rem;
@@ -82,7 +82,7 @@ form > button:disabled {
 .fixture-info {
   display: flex;
   flex-direction: column;
-  border: 1px solid #004ea0;
+  border: 1px solid #0e1e5b;
   margin-bottom: 0.5rem;
   padding: 1rem;
   font-size: 0.8rem;
@@ -90,7 +90,7 @@ form > button:disabled {
 
 .fixture-info.ongoing {
   opacity: 0.75;
-  border: 1px solid #004ea0;
+  border: 1px solid #0e1e5b;
 }
 
 .fixture-info.disabled {
@@ -135,7 +135,7 @@ form > button:disabled {
 }
 
 .bet-button {
-  background-color: #004ea0;
+  background-color: #0e1e5b;
   color: white;
   border: none;
   padding: 0.5rem;
@@ -150,12 +150,12 @@ form > button:disabled {
 
 .bet-form input {
   padding: 0.5rem;
-  border: 1px solid #004ea0;
+  border: 1px solid #0e1e5b;
 }
 
 .bet-form button,
 .show-bets-button {
-  background-color: #004ea0;
+  background-color: #0e1e5b;
   color: white;
   border: none;
   padding: 0.5rem;
@@ -177,7 +177,7 @@ form > button:disabled {
   justify-content: center;
   align-items: center;
   height: 100%;
-  border: 1px solid #004ea0;
+  border: 1px solid #0e1e5b;
   padding: 1rem;
   font-size: 0.8rem;
 }
@@ -260,11 +260,11 @@ table {
   border-collapse: collapse;
   /* border-style: ; */
   font-size: 0.8rem;
-  box-shadow: 0 0 0 1px #004ea0;
+  box-shadow: 0 0 0 1px #0e1e5b;
 }
 
 thead {
-  border-bottom: 1px solid #004ea0;
+  border-bottom: 1px solid #0e1e5b;
   border-top-left-radius: 0.5rem;
   border-top-right-radius: 0.5rem;
 }
@@ -273,12 +273,12 @@ th,
 td {
   padding: 0.5rem;
   text-align: left;
-  border: 1px solid #004ea0;
+  border: 1px solid #0e1e5b;
   white-space: nowrap;
 }
 
 th {
-  background-color: #004ea0;
+  background-color: #0e1e5b;
   color: white;
 }
 
@@ -307,7 +307,7 @@ span#correct-score {
 }
 
 span#correct-margin {
-  background-color: #004ea0;
+  background-color: #0e1e5b;
 }
 
 span#correct-winner {
@@ -322,7 +322,7 @@ span#incorrect {
 header {
   display: flex;
   flex-direction: row;
-  background-color: #004ea0;
+  background-color: #0e1e5b;
   color: white;
   width: 100%;
   position: sticky;

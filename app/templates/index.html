@@ -12,7 +12,7 @@
                     <th>Name</th>
                     <th>Points</th>
                     <th>Last 5 Matches</th>
-                    <th>DPs Remaining</th>
+                    <!-- <th>DPs Remaining</th> -->
                 </tr>
             </thead>
             <tbody>
@@ -36,7 +36,7 @@
                             {% endfor %}
                         </div>
                     </td>
-                    <td>{{user.num_wildcards_remaining}}</td>
+                    <!-- <td>{{user.num_wildcards_remaining}}</td> -->
                 </tr>
                 {% endfor %}
             </tbody>
@@ -45,18 +45,14 @@
     <div class="loading-indicator-container">
         <div class="loading-indicator"></div>
     </div>
-    <div class="todays-fixtures" hidden>
-        <h3>⚽ Today's Matches</h3>
+    <div class="ongoing-fixtures" hidden>
+        <h3>⚽ Ongoing Matches</h3>
     </div>
-    <div class="tomorrows-fixtures" hidden>
-        <h3>⚽ Tomorrow's Matches</h3>
+    <div class="upcoming-fixtures" hidden>
+        <h3>⚽ Upcoming Matches</h3>
     </div>
-    <div class="historical-data" hidden>
-        <h3>📆 Historical Data</h3>
-        <div class="fixture-info" bis_skin_checked="1">
-            <a class="download-button" href="/historical-data">Download historical data (JSON)</a>
-            <a href="/historical-data?is_excel=true">Download historical data (XLSX)</a>
-        </div>
+    <div class="finished-fixtures" hidden>
+        <h3>⚽ Finished Matches</h3>
     </div>
     <script src="/static/scripts.js" defer></script>
 </div>

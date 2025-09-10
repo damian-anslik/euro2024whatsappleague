@@ -1,16 +1,16 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
+import dotenv
 
 import logging
 
-from app.routers import app_router
+dotenv.load_dotenv(dotenv.find_dotenv())
 
+from app.routers import app_router, auth_router, admin_router
 
-load_dotenv()
 logging.basicConfig(level=logging.INFO)
-app = FastAPI(
-    docs_url=None,
-)
+app = FastAPI(title="FastAPI Application", version="1.0.0")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-app.include_router(app_router)
+app.include_router(app_router, tags=["Application"])
+app.include_router(auth_router, tags=["Authentication"])
+app.include_router(admin_router, prefix="/admin", tags=["Admin"])
