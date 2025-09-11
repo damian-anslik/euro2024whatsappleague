@@ -20,6 +20,10 @@
                 <!-- If user has access token cookie -->
                 {% if request.cookies.get('access_token') %}
                 <a href="/logout">Logout</a>
+                <a href="/settings">Settings</a>
+                {% else %}
+                <a href="/login">Login</a>
+                <a href="/signup">Sign Up</a>
                 {% endif %}
             </div>
         </div>

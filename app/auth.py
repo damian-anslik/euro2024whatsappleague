@@ -4,6 +4,7 @@ import supabase
 import functools
 import os
 
+import app.handlers
 
 supabase_client = supabase.create_client(
     supabase_key=os.getenv("SUPABASE_KEY"),
@@ -71,3 +72,21 @@ def change_password(user_id: str, password: str):
         uid=user_id, attributes={"password": password}
     )
     print(change_password_response.model_dump())
+
+
+def update_username(user_id: str, new_username: str):
+    # Check username is available
+    is_username_taken = any(
+        [
+            user.user_metadata["username"] == new_username
+            for user in supabase_client.auth.admin.list_users()
+        ]
+    )
+    if is_username_taken:
+        raise ValueError("Username is already taken")
+    supabase_client.auth.admin.update_user_by_id(
+        uid=user_id, attributes={"user_metadata": {"username": new_username}}
+    )
+    list_users.cache_clear()
+    app.handlers.calculate_current_standings.cache_clear()
+    app.handlers.get_matches_handler.cache_clear()
