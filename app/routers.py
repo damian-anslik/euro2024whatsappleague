@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Request, Form, status, HTTPException, Depends
+from fastapi import APIRouter, Request, Form, status, HTTPException
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse
 
 import datetime
 import logging
@@ -203,5 +203,6 @@ def place_bet(
 
 @admin_router.get("/fixtures/update")
 def update_fixtures(force: bool = False, request: Request = None):
+    # https://console.cron-job.org/
     update_response = handlers.upsert_fixtures(force=force)
     return update_response
