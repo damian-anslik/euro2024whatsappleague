@@ -202,6 +202,6 @@ def place_bet(
 
 
 @admin_router.get("/fixtures/update")
-def update_fixtures(request: Request):
-    update_response = handlers.upsert_fixtures()
-    return {"updated_fixtures": update_response}
+def update_fixtures(force: bool = False, request: Request = None):
+    update_response = handlers.upsert_fixtures(force=force)
+    return update_response

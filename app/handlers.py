@@ -97,10 +97,28 @@ def download_fixtures_for_league(league_id: str, season: str):
     return processed_fixtures
 
 
-def upsert_fixtures():
+def upsert_fixtures(force: bool = False) -> list[dict]:
     # Get a list of all of the leagues we are tracking
     tracked_leagues = leagues_table.select("*").eq("update_matches", True).execute()
-    # For each league, download the fixtures for the current season and upsert them into the database
+    # If not Force, we only want to download fixtures if there are ongoing matches
+    if not force:
+        previously_downloaded_fixtures = matches_table.select("*").execute().data
+        # Check if there are any ongoing matches, e.g. matches that have status in ongoing_match_statuses or matches that are scheduled to start now
+        ongoing_matches = [
+            match
+            for match in previously_downloaded_fixtures
+            if match["status"] in ongoing_match_statuses
+            or (
+                match["status"] in scheduled_match_statuses
+                and datetime.fromisoformat(match["start_time"])
+                <= datetime.now(timezone.utc)
+            )
+        ]
+        if len(ongoing_matches) == 0:
+            return {
+                "total_fixtures_upserted": 0,
+                "fixture_ids": [],
+            }
     all_upserted_fixtures = []
     for league in tracked_leagues.data:
         newly_downloaded_league_fixture = download_fixtures_for_league(
@@ -113,7 +131,11 @@ def upsert_fixtures():
             newly_downloaded_league_fixture, on_conflict="id"
         ).execute()
         all_upserted_fixtures.extend(upsert_response.data)
-    return all_upserted_fixtures
+    response_data = {
+        "total_fixtures_upserted": len(all_upserted_fixtures),
+        "fixture_ids": [f["id"] for f in all_upserted_fixtures],
+    }
+    return response_data
 
 
 def calculate_bet_points(
@@ -353,8 +375,3 @@ def get_matches_handler() -> dict[str, list[dict]]:
         "upcoming": upcoming_matches,
         "finished": finished_matches,
     }
-
-
-if __name__ == "__main__":
-    # upsert_fixtures()
-    insert_bet("140fdf69-3cbb-4c58-b760-8c7de3635327", 1435555, 1, 4)
