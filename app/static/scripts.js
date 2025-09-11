@@ -182,6 +182,32 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
     return form;
   };
 
+  function formatDate(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const isTomorrow =
+      date.getDate() === tomorrow.getDate() &&
+      date.getMonth() === tomorrow.getMonth() &&
+      date.getFullYear() === tomorrow.getFullYear();
+
+    const time = date.toLocaleString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    if (isToday) return `Today ${time}`;
+    if (isTomorrow) return `Tomorrow ${time}`;
+    return `${date.toLocaleDateString("en-GB", { weekday: "long" })} ${time}`;
+  }
+
   let fixtureInfo = document.createElement("div");
   fixtureInfo.classList.add("fixture-info");
   let isOngoingMatch = matchData.status in { "1H": 1, "2H": 1, ET: 1, HT: 1 };
@@ -190,10 +216,11 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
   } else if (isOngoingMatch) {
     fixtureInfo.classList.add("ongoing");
   }
+  // Show league name if available
   let leagueName = document.createElement("span");
   leagueName.classList.add("league-name");
-  leagueName.innerText = matchData.league_name;
-  if (matchData.league_name) {
+  leagueName.innerText = matchData.leagues.name;
+  if (matchData.leagues.name) {
     fixtureInfo.appendChild(leagueName);
   }
   let fixtureTime = document.createElement("span");
@@ -201,13 +228,7 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
   let timestamp = new Date(matchData.start_time).getTime();
   fixtureTime.innerText = {
     TBD: "Time To Be Decided",
-    NS: new Date(timestamp).toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    NS: formatDate(timestamp),
     "1H": "First Half",
     HT: "Half Time",
     "2H": "Second Half",
@@ -339,7 +360,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
     noMatches.innerText = "No matches available at the moment";
-    let fixtures = document.querySelector(".ongoing-fixtures");
+    let fixtures = document.querySelector(".upcoming-fixtures");
     fixtures.appendChild(noMatches);
   } else {
     upcomingMatches.forEach((match) => {
@@ -351,7 +372,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let noMatches = document.createElement("p");
     noMatches.classList.add("no-matches");
     noMatches.innerText = "No matches available at the moment";
-    let fixtures = document.querySelector(".ongoing-fixtures");
+    let fixtures = document.querySelector(".finished-fixtures");
     fixtures.appendChild(noMatches);
   } else {
     finishedMatches.forEach((match) => {
