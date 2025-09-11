@@ -1,13 +1,15 @@
-from apscheduler.schedulers.background import BackgroundScheduler
+import postgrest.exceptions
 import supabase
 import requests
 import dotenv
-import postgrest.exceptions
 
-from datetime import datetime, timedelta, timezone
 import configparser
+import functools
+import datetime
 import logging
 import os
+
+import app.auth
 
 try:
     dotenv.load_dotenv(dotenv.find_dotenv())
@@ -44,6 +46,7 @@ except Exception as e:
     raise e
 
 
+@functools.lru_cache(maxsize=100)
 def insert_bet(
     user_id: str, match_id: int, predicted_home_goals: int, predicted_away_goals: int
 ) -> dict:
@@ -55,6 +58,7 @@ def insert_bet(
     }
     try:
         response = bets_table.upsert(bet_data, on_conflict="match_id,user_id").execute()
+        get_user_bets_handler.cache_clear()
         return response.data[0]
     except postgrest.exceptions.APIError as e:
         exception_message = e.message
@@ -63,11 +67,20 @@ def insert_bet(
 
 def process_fixture(fixture: dict) -> dict:
     fixture_status = fixture["fixture"]["status"]["short"]
+    match_start_time = datetime.datetime.fromisoformat(fixture["fixture"]["date"])
+    # Users can only place bets if the match is scheduled and the start time is in the future
+    if (fixture_status not in scheduled_match_statuses) or (
+        fixture_status in scheduled_match_statuses
+        and match_start_time <= datetime.datetime.now(datetime.timezone.utc)
+    ):
+        can_users_place_bets = False
+    else:
+        can_users_place_bets = True
     return {
         "id": fixture["fixture"]["id"],
         "start_time": fixture["fixture"]["date"],
         "status": fixture_status,
-        "can_users_place_bets": fixture_status in scheduled_match_statuses,
+        "can_users_place_bets": can_users_place_bets,
         "home_team_name": fixture["teams"]["home"]["name"],
         "away_team_name": fixture["teams"]["away"]["name"],
         "home_team_logo_url": fixture["teams"]["home"]["logo"],
@@ -77,27 +90,26 @@ def process_fixture(fixture: dict) -> dict:
     }
 
 
-def download_fixtures_for_league(league_id: str, season: str):
-    request_url = f"https://{os.getenv('RAPIDAPI_BASE_URL')}/v3/fixtures"
-    request_headers = {
-        "X-RapidAPI-Key": os.getenv("RAPIDAPI_KEY"),
-        "X-RapidAPI-Host": os.getenv("RAPIDAPI_BASE_URL"),
-    }
-    query_params = {
-        "league": league_id,
-        "season": season,
-    }
-    response = requests.get(
-        url=request_url,
-        headers=request_headers,
-        params=query_params,
-    )
-    response_data = response.json()["response"]
-    processed_fixtures = [process_fixture(fixture) for fixture in response_data]
-    return processed_fixtures
-
-
 def upsert_fixtures(force: bool = False) -> list[dict]:
+    def download_fixtures_for_league(league_id: str, season: str):
+        request_url = f"https://{os.getenv('RAPIDAPI_BASE_URL')}/v3/fixtures"
+        request_headers = {
+            "X-RapidAPI-Key": os.getenv("RAPIDAPI_KEY"),
+            "X-RapidAPI-Host": os.getenv("RAPIDAPI_BASE_URL"),
+        }
+        query_params = {
+            "league": league_id,
+            "season": season,
+        }
+        response = requests.get(
+            url=request_url,
+            headers=request_headers,
+            params=query_params,
+        )
+        response_data = response.json()["response"]
+        processed_fixtures = [process_fixture(fixture) for fixture in response_data]
+        return processed_fixtures
+
     # Get a list of all of the leagues we are tracking
     tracked_leagues = leagues_table.select("*").eq("update_matches", True).execute()
     # If not Force, we only want to download fixtures if there are ongoing matches
@@ -110,8 +122,8 @@ def upsert_fixtures(force: bool = False) -> list[dict]:
             if match["status"] in ongoing_match_statuses
             or (
                 match["status"] in scheduled_match_statuses
-                and datetime.fromisoformat(match["start_time"])
-                <= datetime.now(timezone.utc)
+                and datetime.datetime.fromisoformat(match["start_time"])
+                <= datetime.datetime.now(datetime.timezone.utc)
             )
         ]
         if len(ongoing_matches) == 0:
@@ -135,9 +147,13 @@ def upsert_fixtures(force: bool = False) -> list[dict]:
         "total_fixtures_upserted": len(all_upserted_fixtures),
         "fixture_ids": [f["id"] for f in all_upserted_fixtures],
     }
+    # Clear the cache for get_matches_handler and calculate_current_standings when fixtures are upserted
+    get_matches_handler.cache_clear()
+    calculate_current_standings.cache_clear()
     return response_data
 
 
+@functools.lru_cache(maxsize=100)
 def calculate_bet_points(
     predicted_home_goals: int,
     predicted_away_goals: int,
@@ -172,15 +188,7 @@ def calculate_bet_points(
         return 0
 
 
-def list_all_users() -> dict[str, str]:
-    # Returns a list of mapping of user_id to user_name
-    users = supabase_client.auth.admin.list_users()
-    user_id_name_mapping = {}
-    for user in users:
-        user_id_name_mapping[user.id] = user.user_metadata.get("username")
-    return user_id_name_mapping
-
-
+@functools.lru_cache(maxsize=1)
 def calculate_current_standings() -> list[dict]:
     def calculate_user_points(matches_and_bets: list[dict]) -> dict[str, int]:
         # Returns a dictionary mapping user_id to points
@@ -284,7 +292,9 @@ def calculate_current_standings() -> list[dict]:
         .execute()
         .data
     )
-    users = list_all_users()
+    users = {
+        user.id: user.user_metadata.get("username") for user in app.auth.list_users()
+    }
     user_ids = list(users.keys())
     user_points_mapping = calculate_user_points(matches_and_bets)
     user_potential_points_mapping = calculate_user_potential_points(matches_and_bets)
@@ -312,11 +322,13 @@ def calculate_current_standings() -> list[dict]:
     return standings
 
 
+@functools.lru_cache(maxsize=100)
 def get_user_bets_handler(user_id: str) -> list[dict]:
     user_bets = bets_table.select("*").eq("user_id", user_id).execute().data
     return user_bets
 
 
+@functools.lru_cache(maxsize=1)
 def get_matches_handler() -> dict[str, list[dict]]:
     matches_and_bets = (
         matches_table.select("*, bets(*)")
@@ -326,7 +338,9 @@ def get_matches_handler() -> dict[str, list[dict]]:
         .data
     )
     # List all users
-    users = list_all_users()
+    users = {
+        user.id: user.user_metadata.get("username") for user in app.auth.list_users()
+    }
     # Remove bets from upcoming matches so that users cannot see other users' bets before a match starts
     upcoming_matches = [
         match
@@ -335,12 +349,12 @@ def get_matches_handler() -> dict[str, list[dict]]:
     ]
     # Filter out upcoming matches that are more than 48 hours in the future
     SHOW_MATCHES_N_HOURS_AHEAD = 24 * 7
-    now = datetime.now(timezone.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
     upcoming_matches = [
         match
         for match in upcoming_matches
-        if datetime.fromisoformat(match["start_time"])
-        <= now + timedelta(hours=SHOW_MATCHES_N_HOURS_AHEAD)
+        if datetime.datetime.fromisoformat(match["start_time"])
+        <= now + datetime.timedelta(hours=SHOW_MATCHES_N_HOURS_AHEAD)
     ]
     for match in upcoming_matches:
         match.pop("bets", None)

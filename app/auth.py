@@ -1,5 +1,5 @@
-import supabase
 import gotrue.errors
+import supabase
 
 import functools
 import os
@@ -41,6 +41,7 @@ def signup(email: str, username: str, password: str) -> str:
                 "options": {"data": {"username": username}},
             }
         )
+        list_users.cache_clear()
     except gotrue.errors.AuthApiError as e:
         raise ValueError(e)
 
