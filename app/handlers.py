@@ -328,10 +328,27 @@ def get_user_bets_handler(user_id: str) -> list[dict]:
 
 
 @functools.lru_cache(maxsize=1)
-def get_matches_handler() -> dict[str, list[dict]]:
+def get_matches_handler(
+    show_matches_n_days_ahead: int = 7, show_matches_n_days_behind: int = 2
+) -> dict[str, list[dict]]:
+    # Only show matches that are in dates between now - show_matches_n_days_behind and now + show_matches_n_days_ahead
     matches_and_bets = (
-        matches_table.select("*, bets(*)")
+        matches_table.select("*, bets(*), leagues(name)")
         .eq("show", True)
+        .gte(
+            "start_time",
+            (
+                datetime.datetime.now(datetime.timezone.utc)
+                - datetime.timedelta(hours=show_matches_n_days_behind * 24)
+            ).isoformat(),
+        )
+        .lt(
+            "start_time",
+            (
+                datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(hours=show_matches_n_days_ahead * 24)
+            ).isoformat(),
+        )
         .order("start_time", desc=True)
         .execute()
         .data
@@ -345,15 +362,6 @@ def get_matches_handler() -> dict[str, list[dict]]:
         match
         for match in matches_and_bets
         if match["status"] in scheduled_match_statuses
-    ]
-    # Filter out upcoming matches that are more than 48 hours in the future
-    SHOW_MATCHES_N_HOURS_AHEAD = 24 * 7
-    now = datetime.datetime.now(datetime.timezone.utc)
-    upcoming_matches = [
-        match
-        for match in upcoming_matches
-        if datetime.datetime.fromisoformat(match["start_time"])
-        <= now + datetime.timedelta(hours=SHOW_MATCHES_N_HOURS_AHEAD)
     ]
     for match in upcoming_matches:
         match.pop("bets", None)
@@ -380,9 +388,6 @@ def get_matches_handler() -> dict[str, list[dict]]:
         for bet in match["bets"]:
             bet["user"] = {"name": users.get(bet["user_id"], "User: " + bet["user_id"])}
     finished_matches.sort(key=lambda x: x["start_time"], reverse=True)
-    SHOW_LAST_N_FINISHED_MATCHES = 10
-    if len(finished_matches) > SHOW_LAST_N_FINISHED_MATCHES:
-        finished_matches = finished_matches[:SHOW_LAST_N_FINISHED_MATCHES]
     return {
         "ongoing": ongoing_matches,
         "upcoming": upcoming_matches,
