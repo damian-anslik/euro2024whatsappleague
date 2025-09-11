@@ -115,7 +115,10 @@ def upsert_fixtures(force: bool = False) -> list[dict]:
             )
         ]
         if len(ongoing_matches) == 0:
-            return []
+            return {
+                "total_fixtures_upserted": 0,
+                "fixture_ids": [],
+            }
     all_upserted_fixtures = []
     for league in tracked_leagues.data:
         newly_downloaded_league_fixture = download_fixtures_for_league(
@@ -128,7 +131,11 @@ def upsert_fixtures(force: bool = False) -> list[dict]:
             newly_downloaded_league_fixture, on_conflict="id"
         ).execute()
         all_upserted_fixtures.extend(upsert_response.data)
-    return all_upserted_fixtures
+    response_data = {
+        "total_fixtures_upserted": len(all_upserted_fixtures),
+        "fixture_ids": [f["id"] for f in all_upserted_fixtures],
+    }
+    return response_data
 
 
 def calculate_bet_points(
