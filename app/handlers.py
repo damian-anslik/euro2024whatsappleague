@@ -65,32 +65,31 @@ def insert_bet(
         raise ValueError(exception_message)
 
 
-def process_fixture(fixture: dict) -> dict:
-    fixture_status = fixture["fixture"]["status"]["short"]
-    match_start_time = datetime.datetime.fromisoformat(fixture["fixture"]["date"])
-    # Users can only place bets if the match is scheduled and the start time is in the future
-    if (fixture_status not in scheduled_match_statuses) or (
-        fixture_status in scheduled_match_statuses
-        and match_start_time <= datetime.datetime.now(datetime.timezone.utc)
-    ):
-        can_users_place_bets = False
-    else:
-        can_users_place_bets = True
-    return {
-        "id": fixture["fixture"]["id"],
-        "start_time": fixture["fixture"]["date"],
-        "status": fixture_status,
-        "can_users_place_bets": can_users_place_bets,
-        "home_team_name": fixture["teams"]["home"]["name"],
-        "away_team_name": fixture["teams"]["away"]["name"],
-        "home_team_logo_url": fixture["teams"]["home"]["logo"],
-        "away_team_logo_url": fixture["teams"]["away"]["logo"],
-        "home_team_goals": fixture["goals"]["home"],
-        "away_team_goals": fixture["goals"]["away"],
-    }
-
-
 def upsert_fixtures(force: bool = False) -> list[dict]:
+    def process_fixture(fixture: dict) -> dict:
+        fixture_status = fixture["fixture"]["status"]["short"]
+        match_start_time = datetime.datetime.fromisoformat(fixture["fixture"]["date"])
+        # Users can only place bets if the match is scheduled and the start time is in the future
+        if (fixture_status not in scheduled_match_statuses) or (
+            fixture_status in scheduled_match_statuses
+            and match_start_time <= datetime.datetime.now(datetime.timezone.utc)
+        ):
+            can_users_place_bets = False
+        else:
+            can_users_place_bets = True
+        return {
+            "id": fixture["fixture"]["id"],
+            "start_time": fixture["fixture"]["date"],
+            "status": fixture_status,
+            "can_users_place_bets": can_users_place_bets,
+            "home_team_name": fixture["teams"]["home"]["name"],
+            "away_team_name": fixture["teams"]["away"]["name"],
+            "home_team_logo_url": fixture["teams"]["home"]["logo"],
+            "away_team_logo_url": fixture["teams"]["away"]["logo"],
+            "home_team_goals": fixture["goals"]["home"],
+            "away_team_goals": fixture["goals"]["away"],
+        }
+
     def download_fixtures_for_league(league_id: str, season: str):
         request_url = f"https://{os.getenv('RAPIDAPI_BASE_URL')}/v3/fixtures"
         request_headers = {

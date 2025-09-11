@@ -112,6 +112,21 @@ def change_password(password: str = Form(...), token: str = Form(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@auth_router.post("/update-username")
+def update_username(request: Request, username: str = Form(...)):
+    access_token = request.cookies.get("access_token", None)
+    if not access_token:
+        response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        return response
+    try:
+        user_id = auth.check_user_session(access_token)
+        auth.update_username(user_id=user_id, new_username=username)
+        return {"message": "Username updated successfully."}
+    except ValueError as e:
+        logging.error(f"Error updating username: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 # Application Routes
 
 
@@ -138,6 +153,31 @@ def read_root(request: Request):
             del request.cookies["access_token"]
         response = templates.TemplateResponse("login.html", {"request": request})
         return response
+
+
+@app_router.get("/settings")
+def get_settings(request: Request):
+    access_token = request.cookies.get("access_token", None)
+    if not access_token:
+        response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        return response
+    user_id = auth.check_user_session(access_token)
+    if not user_id:
+        response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        return response
+    users = auth.list_users()
+    username = None
+    for user in users:
+        if user.id == user_id:
+            username = user.user_metadata.get("username", None)
+            break
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
+            "username": username,
+        },
+    )
 
 
 @app_router.get("/rules")
