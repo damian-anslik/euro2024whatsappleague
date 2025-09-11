@@ -219,6 +219,7 @@ def place_bet(
     fixture_id: int = Form(...),
     home_goals: int = Form(...),
     away_goals: int = Form(...),
+    double_points: bool = Form(False),
 ):
     access_token = request.cookies.get("access_token", None)
     if not access_token:
@@ -231,9 +232,13 @@ def place_bet(
             match_id=fixture_id,
             predicted_home_goals=home_goals,
             predicted_away_goals=away_goals,
+            use_double_points=double_points,
         )
         return updated_bet
     except Exception as e:
+        if isinstance(e, ValueError):
+            logging.error(f"Error placing bet: {e}")
+            raise HTTPException(status_code=400, detail=str(e))
         logging.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
 
