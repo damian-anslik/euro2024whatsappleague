@@ -43,6 +43,8 @@ def signup(email: str, username: str, password: str) -> str:
             }
         )
         list_users.cache_clear()
+        app.handlers.calculate_current_standings.cache_clear()
+        app.handlers.get_matches_handler.cache_clear()
     except gotrue.errors.AuthApiError as e:
         raise ValueError(e)
 
