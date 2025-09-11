@@ -9,6 +9,12 @@ body {
   color: #2b2c36;
 }
 
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 main {
   display: flex;
   flex-direction: column;

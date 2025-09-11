@@ -90,35 +90,18 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
     awayTeamBet.placeholder = `Your Prediction for ${matchData.away_team_name}`;
     awayTeamBet.min = 0;
     awayTeamBet.required = true;
-    // Wildcard toggle
-    // let wildcardToggle = document.createElement("input");
-    // wildcardToggle.id = "wildcard-toggle";
-    // wildcardToggle.type = "button";
-    // wildcardToggle.name = "use_wildcard";
-    // if (userBetData && userBetData.use_wildcard) {
-    //   wildcardToggle.value = "Double Points Enabled";
-    // } else {
-    //   wildcardToggle.value = `Double Points Disabled (${numWildcardsRemaining} Remaining)`;
-    //   wildcardToggle.disabled = numWildcardsRemaining === 0;
-    // }
-    // wildcardToggle.onclick = () => {
-    //   if (
-    //     wildcardToggle.value ===
-    //     `Double Points Disabled (${numWildcardsRemaining} Remaining)`
-    //   ) {
-    //     wildcardToggle.value = "Double Points Enabled (Submit to confirm)";
-    //   } else if (
-    //     wildcardToggle.value === "Double Points Enabled (Submit to confirm)"
-    //   ) {
-    //     wildcardToggle.value = `Double Points Disabled (${numWildcardsRemaining} Remaining)`;
-    //   } else if (
-    //     wildcardToggle.value === "Double Points Disabled (Submit to confirm)"
-    //   ) {
-    //     wildcardToggle.value = `Double Points Enabled`;
-    //   } else {
-    //     wildcardToggle.value = `Double Points Disabled (Submit to confirm)`;
-    //   }
-    // };
+    // Create checkbox for using double_points
+    let toggleDoublePointsCheckboxContainer = document.createElement("div");
+    toggleDoublePointsCheckboxContainer.classList.add("checkbox-container");
+    let toggleDoublePointsLabel = document.createElement("label");
+    toggleDoublePointsLabel.htmlFor = `double-points-${matchId}`;
+    toggleDoublePointsLabel.innerText = "Use Double Points: ";
+    toggleDoublePointsCheckboxContainer.appendChild(toggleDoublePointsLabel);
+    let toggleDoublePointsCheckbox = document.createElement("input");
+    toggleDoublePointsCheckbox.type = "checkbox";
+    toggleDoublePointsCheckbox.name = "double_points";
+    toggleDoublePointsCheckbox.id = `double-points-${matchId}`;
+    toggleDoublePointsCheckboxContainer.appendChild(toggleDoublePointsCheckbox);
     // Submit button
     let submit = document.createElement("button");
     submit.type = "submit";
@@ -141,6 +124,7 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
     if (userBetData) {
       homeTeamBet.value = userBetData.predicted_home_goals;
       awayTeamBet.value = userBetData.predicted_away_goals;
+      toggleDoublePointsCheckbox.checked = userBetData.use_double_points;
     }
     let fixtureId = document.createElement("input");
     fixtureId.type = "hidden";
@@ -153,10 +137,6 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
       successContainer.style.display = "none";
       submit.innerText = "Submitting Prediction...";
       let formData = new FormData(form);
-      // formData.append(
-      //   "use_wildcard",
-      //   wildcardToggle.value.includes("Double Points Enabled") ? 1 : 0
-      // );
       let response = await fetch("/bets", {
         method: "POST",
         body: formData,
@@ -177,7 +157,7 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
     form.appendChild(homeTeamBet);
     form.appendChild(awayTeamBet);
     form.appendChild(fixtureId);
-    // form.appendChild(wildcardToggle);
+    form.appendChild(toggleDoublePointsCheckboxContainer);
     form.appendChild(submit);
     return form;
   };

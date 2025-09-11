@@ -26,8 +26,8 @@ try:
     matches_table = supabase_client.table(
         table_name=config.get("database", "matches_table")
     )
-    match_checks_table = supabase_client.table(
-        table_name=config.get("database", "match_checks_table")
+    double_points_table = supabase_client.table(
+        table_name=config.get("database", "double_points_table")
     )
     scheduled_match_statuses = ["NS", "TBD"]
     regular_time_match_statuses = ["1H", "HT", "2H"]
@@ -46,9 +46,12 @@ except Exception as e:
     raise e
 
 
-@functools.lru_cache(maxsize=100)
 def insert_bet(
-    user_id: str, match_id: int, predicted_home_goals: int, predicted_away_goals: int
+    user_id: str,
+    match_id: int,
+    predicted_home_goals: int,
+    predicted_away_goals: int,
+    use_double_points: bool = False,
 ) -> dict:
     bet_data = {
         "user_id": user_id,
@@ -57,9 +60,45 @@ def insert_bet(
         "predicted_away_goals": predicted_away_goals,
     }
     try:
+        # Insert the bet
         response = bets_table.upsert(bet_data, on_conflict="match_id,user_id").execute()
+        bet_id = response.data[0]["id"]
+        # Calculate how many double points the user has used on other bets
+        MAX_NUMBER_DOUBLE_POINTS = config.getint("default", "max_number_wildcards")
+        current_double_points = (
+            double_points_table.select("bet_id").eq("user_id", user_id).execute().data
+        )
+        num_double_points_used = len(
+            [dp for dp in current_double_points if dp["bet_id"] != bet_id]
+        )
+        if use_double_points and num_double_points_used >= MAX_NUMBER_DOUBLE_POINTS:
+            # Delete the bet that was just inserted/updated to keep data consistent
+            bets_table.delete().eq("id", response.data[0]["id"]).execute()
+            # Return an error
+            raise ValueError(
+                f"You have already used your maximum of {MAX_NUMBER_DOUBLE_POINTS} double points."
+            )
+        # If use_double_points is True and user does not have double_points already enabled for this bet, insert into double_points_table, otherwise delete from double_points_table if it exists
+        if use_double_points and not any(
+            dp for dp in current_double_points if dp["bet_id"] == bet_id
+        ):
+            double_points_table.upsert(
+                {"bet_id": bet_id, "user_id": user_id}, on_conflict="bet_id,user_id"
+            ).execute()
+        elif not use_double_points and any(
+            dp for dp in current_double_points if dp["bet_id"] == bet_id
+        ):
+            # Check if there is an existing double points entry for this bet, if so, delete it
+            double_points_table.delete().eq("bet_id", bet_id).eq(
+                "user_id", user_id
+            ).execute()
+        # Clear the cache for get_user_bets_handler when a bet is inserted
         get_user_bets_handler.cache_clear()
-        return response.data[0]
+        calculate_current_standings.cache_clear()
+        return {
+            **response.data[0],
+            "use_double_points": use_double_points,
+        }
     except postgrest.exceptions.APIError as e:
         exception_message = e.message
         raise ValueError(exception_message)
@@ -209,6 +248,9 @@ def calculate_current_standings() -> list[dict]:
                     actual_home_goals,
                     actual_away_goals,
                 )
+                has_double_points = len(bet.get("doublePoints", [])) > 0
+                if has_double_points:
+                    points *= 2
                 user_points_mapping[user_id] += points
         return user_points_mapping
 
@@ -232,6 +274,9 @@ def calculate_current_standings() -> list[dict]:
                     actual_home_goals,
                     actual_away_goals,
                 )
+                has_double_points = len(bet.get("doublePoints", [])) > 0
+                if has_double_points:
+                    points *= 2
                 user_potential_points_mapping[user_id] += points
         return user_potential_points_mapping
 
@@ -267,6 +312,9 @@ def calculate_current_standings() -> list[dict]:
                     actual_home_goals,
                     actual_away_goals,
                 )
+                has_double_points = len(bet.get("doublePoints", [])) > 0
+                if has_double_points:
+                    points *= 2
                 user_points_in_last_n_finished_matches_mapping[user_id].append(points)
             users_who_did_not_place_bets_in_match = [
                 user_id
@@ -284,7 +332,7 @@ def calculate_current_standings() -> list[dict]:
 
     matches_and_bets = (
         matches_table.select(
-            "id, status, home_team_goals, away_team_goals, start_time, bets(user_id, predicted_home_goals, predicted_away_goals)"
+            "id, status, home_team_goals, away_team_goals, start_time, bets(user_id, predicted_home_goals, predicted_away_goals, doublePoints(*))"
         )
         .eq("show", True)
         .order("start_time", desc=True)
@@ -323,8 +371,20 @@ def calculate_current_standings() -> list[dict]:
 
 @functools.lru_cache(maxsize=100)
 def get_user_bets_handler(user_id: str) -> list[dict]:
-    user_bets = bets_table.select("*").eq("user_id", user_id).execute().data
-    return user_bets
+    user_bets = (
+        bets_table.select("*", "doublePoints(*)").eq("user_id", user_id).execute().data
+    )
+    processed_user_bets = []
+    for bet in user_bets:
+        use_double_points = len(bet.get("doublePoints", [])) > 0
+        bet.pop("doublePoints", None)
+        processed_user_bets.append(
+            {
+                **bet,
+                "use_double_points": use_double_points,
+            }
+        )
+    return processed_user_bets
 
 
 @functools.lru_cache(maxsize=1)
