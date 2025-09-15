@@ -393,7 +393,7 @@ def get_matches_handler(
 ) -> dict[str, list[dict]]:
     # Only show matches that are in dates between now - show_matches_n_days_behind and now + show_matches_n_days_ahead
     matches_and_bets = (
-        matches_table.select("*, bets(*), leagues(name)")
+        matches_table.select("*, bets(*, doublePoints(id)), leagues(name)")
         .eq("show", True)
         .gte(
             "start_time",
