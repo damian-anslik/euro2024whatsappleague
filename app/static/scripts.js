@@ -278,12 +278,12 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
     homeGoalsHeader.innerText = "Predicted Home Goals";
     let awayGoalsHeader = document.createElement("th");
     awayGoalsHeader.innerText = "Predicted Away Goals";
-    // let pointBoosterEnabledHeader = document.createElement("th");
-    // pointBoosterEnabledHeader.innerText = "Double Points Enabled";
+    let pointBoosterEnabledHeader = document.createElement("th");
+    pointBoosterEnabledHeader.innerText = "Double Points Enabled";
     betsInfoTableHeader.appendChild(usernameHeader);
     betsInfoTableHeader.appendChild(homeGoalsHeader);
     betsInfoTableHeader.appendChild(awayGoalsHeader);
-    // betsInfoTableHeader.appendChild(pointBoosterEnabledHeader);
+    betsInfoTableHeader.appendChild(pointBoosterEnabledHeader);
     betsInfoTable.appendChild(betsInfoTableHeader);
     matchData.bets.forEach((bet) => {
       let betInfo = document.createElement("tr");
@@ -293,12 +293,12 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
       homeGoals.innerText = bet.predicted_home_goals;
       let awayGoals = document.createElement("td");
       awayGoals.innerText = bet.predicted_away_goals;
-      // let pointBoosterEnabled = document.createElement("td");
-      // pointBoosterEnabled.innerText = bet.use_wildcard ? "Yes" : "No";
+      let pointBoosterEnabled = document.createElement("td");
+      pointBoosterEnabled.innerText = bet.doublePoints.length > 0 ? "Yes" : "No";
       betInfo.appendChild(username);
       betInfo.appendChild(homeGoals);
       betInfo.appendChild(awayGoals);
-      // betInfo.appendChild(pointBoosterEnabled);
+      betInfo.appendChild(pointBoosterEnabled);
       betsInfoTable.appendChild(betInfo);
     });
     betsInfoTable.style.display = "none";
