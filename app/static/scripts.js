@@ -108,6 +108,7 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
     if (!canUserPlaceBets) {
       homeTeamBet.disabled = true;
       awayTeamBet.disabled = true;
+      toggleDoublePointsCheckbox.disabled = true;
       submit.disabled = true;
       // wildcardToggle.disabled = true;
       if (matchStatus === "FT") {
