@@ -363,7 +363,7 @@ def calculate_current_standings() -> list[dict]:
             }
         )
     # Rank the standings by total points + potential points
-    standings.sort(key=lambda x: (x["points"] + x["potential_points"]), reverse=True)
+    standings.sort(key=lambda x: (-(x["points"] + x["potential_points"]), x["name"].lower()), reverse=True)
     for index, entry in enumerate(standings):
         entry["rank"] = index + 1
     return standings
