@@ -251,3 +251,9 @@ def update_fixtures(force: bool = False, request: Request = None):
     # https://console.cron-job.org/
     update_response = handlers.upsert_fixtures(force=force)
     return update_response
+
+
+@admin_router.get("/fixtures/links/update")
+def update_fixture_links(request: Request = None):
+    update_response = handlers.upsert_fixture_links()
+    return update_response
