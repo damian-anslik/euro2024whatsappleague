@@ -279,7 +279,7 @@ def calculate_current_standings() -> list[dict]:
                     points *= 2
                 user_potential_points_mapping[user_id] += points
         return user_potential_points_mapping
-
+    
     def calculate_user_points_in_last_n_finished_matches(
         matches_and_bets: list[dict],
         user_ids: list[str],
@@ -330,6 +330,20 @@ def calculate_current_standings() -> list[dict]:
             user_points_in_last_n_finished_matches_mapping[user_id].reverse()
         return user_points_in_last_n_finished_matches_mapping
 
+    def calculate_num_double_points_used(matches_and_bets: list[dict]) -> dict[str, int]:
+        user_double_points_mapping = {}
+        for match in matches:
+            if match["status"] in scheduled_match_statuses:
+                continue
+            for bet in match["bets"]:
+                if len(bet.get("doublePoints", []))==0:
+                    continue
+                user_id = bet["user_id"]
+                if user_id not in user_double_points_mapping:
+                    user_double_points_mapping[user_id] = 0
+                user_double_points_mapping[user_id] += 1
+        return user_double_points_mapping
+
     matches_and_bets = (
         matches_table.select(
             "id, status, home_team_goals, away_team_goals, start_time, bets(user_id, predicted_home_goals, predicted_away_goals, doublePoints(*))"
@@ -348,7 +362,9 @@ def calculate_current_standings() -> list[dict]:
     user_points_in_last_n_finished_matches_mapping = (
         calculate_user_points_in_last_n_finished_matches(matches_and_bets, user_ids, 5)
     )
+    user_double_points_mapping = calculate_num_double_points_used(matches_and_bets)
     # Create the standings list
+    num_double_points_allowed = config.getint("default", "max_number_wildcards")
     standings = []
     for user_id in user_ids:
         standings.append(
@@ -360,6 +376,7 @@ def calculate_current_standings() -> list[dict]:
                 "points_in_last_n_finished_matches": user_points_in_last_n_finished_matches_mapping.get(
                     user_id, []
                 ),
+                "num_double_points_remaining": num_double_points_allowed - user_double_points_mapping.get(user_id, 0),
             }
         )
     # Rank the standings by total points + potential points
