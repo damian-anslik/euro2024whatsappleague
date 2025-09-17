@@ -2,10 +2,12 @@ import postgrest.exceptions
 import supabase
 import requests
 import dotenv
+import bs4
 
 import configparser
 import functools
 import datetime
+import hashlib
 import logging
 import os
 
@@ -28,6 +30,9 @@ try:
     )
     double_points_table = supabase_client.table(
         table_name=config.get("database", "double_points_table")
+    )
+    match_links_table = supabase_client.table(
+        table_name="matchLinks"
     )
     scheduled_match_statuses = ["NS", "TBD"]
     regular_time_match_statuses = ["1H", "HT", "2H"]
@@ -470,3 +475,44 @@ def get_matches_handler(
         "upcoming": upcoming_matches,
         "finished": finished_matches,
     }
+
+
+def upsert_fixture_links():
+    response = requests.get("https://www.redditsoccerstreams.name/")
+    response_html = bs4.BeautifulSoup(response.text, features="html.parser")
+    matches_and_links = {}
+    for tr in response_html.find("table").find_all("tr"):
+        tds = tr.find_all("td")
+        if len(tds) == 3:
+            match = tds[1].get_text(strip=True)
+            match_hash = hashlib.sha256(match.encode()).hexdigest()
+            team_names = match.split(" vs ", maxsplit=1)
+            if len(team_names) != 2:
+                continue
+            home_team_name = team_names[0]
+            away_team_name = team_names[1]
+            if match_hash not in matches_and_links:
+                matches_and_links[match_hash] = {
+                    "home_team_name": home_team_name,
+                    "away_team_name": away_team_name,
+                    "links": [],
+                }
+            link = tds[2].find("a")["href"] if tds[2].find("a") else None
+            if link is None:
+                continue
+            matches_and_links[match_hash]["links"].append(link)
+    for _, details in matches_and_links.items():
+        home_team_name = details["home_team_name"]
+        away_team_name = details["away_team_name"]
+        matches = matches_table.select(*).eq("home_team_name", home_team_name).eq("away_team_name", away_team_name).execute().data
+        if len(matches)==0:
+            continue
+        match_id = matches[0]["id"]
+        for link in details["links"]:
+            match_links_table.upsert(
+                {
+                    "match_id": match_id,
+                    "url": link,
+                }
+            ).execute()
+        
