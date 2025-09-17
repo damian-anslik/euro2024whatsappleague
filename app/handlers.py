@@ -506,15 +506,12 @@ def upsert_fixture_links():
     for _, details in matches_and_links.items():
         home_team_name = details["home_team_name"]
         away_team_name = details["away_team_name"]
-        matches = matches_table.select(*).eq("home_team_name", home_team_name).eq("away_team_name", away_team_name).execute().data
+        matches = matches_table.select("id").eq("home_team_name", home_team_name).eq("away_team_name", away_team_name).execute().data
         if len(matches)==0:
             continue
         match_id = matches[0]["id"]
         for link in details["links"]:
             match_links_table.upsert(
-                {
-                    "match_id": match_id,
-                    "url": link,
-                }
+                {"match_id": match_id, "url": link}, on_conflict="match_id,url"
             ).execute()
         
