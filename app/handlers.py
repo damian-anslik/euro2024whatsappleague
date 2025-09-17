@@ -332,7 +332,7 @@ def calculate_current_standings() -> list[dict]:
 
     def calculate_num_double_points_used(matches_and_bets: list[dict]) -> dict[str, int]:
         user_double_points_mapping = {}
-        for match in matches:
+        for match in matches_and_bets:
             if match["status"] in scheduled_match_statuses:
                 continue
             for bet in match["bets"]:
