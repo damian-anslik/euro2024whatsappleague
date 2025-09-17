@@ -415,7 +415,7 @@ def get_matches_handler(
 ) -> dict[str, list[dict]]:
     # Only show matches that are in dates between now - show_matches_n_days_behind and now + show_matches_n_days_ahead
     matches_and_bets = (
-        matches_table.select("*, bets(*, doublePoints(id)), leagues(name)")
+        matches_table.select("*, bets(*, doublePoints(id)), leagues(name), matchLinks(url)")
         .eq("show", True)
         .gte(
             "start_time",
@@ -464,6 +464,8 @@ def get_matches_handler(
         for match in matches_and_bets
         if match["status"] in finished_match_statuses
     ]
+    for match in finished_matches:
+        match.pop("matchLinks", None)
     for match in finished_matches:
         if "bets" not in match:
             continue
