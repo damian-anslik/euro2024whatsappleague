@@ -19,8 +19,18 @@ def list_users():
 
 
 def check_user_session(access_token: str) -> str:
-    decoded_token = supabase_client.auth._decode_jwt(access_token)
-    user_id = decoded_token["sub"]
+    if "." in access_token:
+        decoded_token = supabase_client.auth._decode_jwt(access_token)
+        user_id = decoded_token["sub"]
+    else:
+        # If user is attempting to recover their password
+        decoded_token = supabase_client.auth.verify_otp(
+            {
+                "token_hash": access_token,
+                "type": "recovery",
+            }
+        )
+        user_id = decoded_token.user.id
     return user_id
 
 
