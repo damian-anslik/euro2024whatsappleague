@@ -305,11 +305,50 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
     betsInfoContainer.appendChild(betsInfoTable);
     fixtureInfo.appendChild(betsInfoContainer);
   }
+  if (matchData.matchLinks && matchData.matchLinks.length > 0) {
+    let showMatchLinksButton = document.createElement("button");
+    showMatchLinksButton.innerText = "Show Match Links";
+    showMatchLinksButton.classList.add("show-match-links-button");
+    showMatchLinksButton.onclick = () => {
+      let matchLinksTable = fixtureInfo.querySelector(".match-links-info");
+      if (matchLinksTable.style.display === "none") {
+        matchLinksTable.style.display = "table";
+        showMatchLinksButton.innerText = "Hide Match Links";
+      } else {
+        matchLinksTable.style.display = "none";
+        showMatchLinksButton.innerText = "Show Match Links";
+      }
+    };
+    fixtureInfo.appendChild(showMatchLinksButton);
+    let matchLinksContainer = document.createElement("div");
+    matchLinksContainer.classList.add("table-container");
+    let matchLinksTable = document.createElement("table");
+    matchLinksTable.classList.add("match-links-info");
+    let matchLinksTableHeader = document.createElement("tr");
+    let matchLinkURLHeader = document.createElement("th");
+    matchLinkURLHeader.innerText = "URL";
+    matchLinksTableHeader.appendChild(matchLinkURLHeader);
+    matchLinksTable.appendChild(matchLinksTableHeader)
+    matchData.matchLinks.forEach((link) => {
+      let linkInfo = document.createElement("tr");
+      let urlCell = document.createElement("td");
+      let a = document.createElement("a");
+      a.href = link.url;
+      a.textContent = link.url;
+      a.target = "_blank"; // optional: opens in new tab
+      urlCell.appendChild(a);
+      linkInfo.appendChild(urlCell);
+      matchLinksTable.appendChild(linkInfo);
+    });
+    matchLinksTable.style.display = "none";
+    matchLinksContainer.appendChild(matchLinksTable);
+    fixtureInfo.appendChild(matchLinksContainer);
+  }
   let selector = isUpcoming
     ? ".upcoming-fixtures"
     : isOngoing
-    ? ".ongoing-fixtures"
-    : ".finished-fixtures";
+      ? ".ongoing-fixtures"
+      : ".finished-fixtures";
   let fixtures = document.querySelector(selector);
   fixtures.appendChild(fixtureInfo);
 };

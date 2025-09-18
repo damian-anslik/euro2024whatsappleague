@@ -160,7 +160,8 @@ form > button:disabled {
 }
 
 .bet-form button,
-.show-bets-button {
+.show-bets-button,
+.show-match-links-button {
   background-color: #0e1e5b;
   color: white;
   border: none;
@@ -168,7 +169,8 @@ form > button:disabled {
   cursor: pointer;
 }
 
-.show-bets-button {
+.show-bets-button,
+.show-match-links-button {
   margin-block: 0.5rem;
 }
 
