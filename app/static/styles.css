@@ -94,9 +94,17 @@ form > button:disabled {
   font-size: 0.8rem;
 }
 
+
 .fixture-info.ongoing {
   opacity: 0.75;
   border: 1px solid #0e1e5b;
+  position: relative;
+}
+
+.fixture-info.ongoing iframe {
+  opacity: 1;
+  position: relative;
+  z-index: 1;
 }
 
 .fixture-info.disabled {
@@ -172,6 +180,12 @@ form > button:disabled {
 .show-bets-button,
 .show-match-links-button {
   margin-block: 0.5rem;
+  margin-bottom: 0;
+}
+
+.match-links-info,
+.bets-info {
+  margin-top: 0.5rem;
 }
 
 .bet-form button:disabled {
