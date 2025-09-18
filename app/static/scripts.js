@@ -328,18 +328,45 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
     let matchLinkURLHeader = document.createElement("th");
     matchLinkURLHeader.innerText = "URL";
     matchLinksTableHeader.appendChild(matchLinkURLHeader);
-    matchLinksTable.appendChild(matchLinksTableHeader)
+    matchLinksTable.appendChild(matchLinksTableHeader);
     matchData.matchLinks.forEach((link) => {
       let linkInfo = document.createElement("tr");
       let urlCell = document.createElement("td");
       let a = document.createElement("a");
-      a.href = link.url;
+      a.href = "#";
       a.textContent = link.url;
-      a.target = "_blank"; // optional: opens in new tab
+      a.onclick = async (e) => {
+        e.preventDefault();
+        try {
+          let res = await fetch(
+            `/fixtures/links/iframe/source?url=${encodeURIComponent(link.url)}`,
+            { headers: { "accept": "application/json" } }
+          );
+          if (!res.ok) throw new Error("Failed to fetch iframe source");
+          let data = await res.json();
+          let existingIframe = fixtureInfo.querySelector("iframe.match-iframe");
+          if (existingIframe) {
+            existingIframe.src = data.iframeSrc+"?autoplay=1";
+          } else {
+            let iframe = document.createElement("iframe");
+            iframe.classList.add("match-iframe");
+            iframe.src = data.iframeSrc;
+            iframe.width = "100%";
+            iframe.style.border = "none";
+            iframe.style.marginTop = "0.5rem";
+            iframe.allow = "autoplay; fullscreen";
+            fixtureInfo.appendChild(iframe);
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Failed to load iframe.");
+        }
+      };
       urlCell.appendChild(a);
       linkInfo.appendChild(urlCell);
       matchLinksTable.appendChild(linkInfo);
     });
+
     matchLinksTable.style.display = "none";
     matchLinksContainer.appendChild(matchLinksTable);
     fixtureInfo.appendChild(matchLinksContainer);

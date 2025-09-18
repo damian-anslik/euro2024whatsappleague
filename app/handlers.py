@@ -499,6 +499,13 @@ def get_matches_handler(
         "finished": finished_matches,
     }
 
+@functools.lru_cache()
+def get_iframe_url(url: str):
+    response = requests.get(url)
+    response_html = bs4.BeautifulSoup(response.text, features="html.parser")
+    iframe = response_html.find("iframe")
+    iframe_src = iframe["src"]
+    return iframe_src
 
 def upsert_fixture_links():
     todays_date = datetime.datetime.today()
