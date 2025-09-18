@@ -2,10 +2,12 @@ import postgrest.exceptions
 import supabase
 import requests
 import dotenv
+import bs4
 
 import configparser
 import functools
 import datetime
+import hashlib
 import logging
 import os
 
@@ -19,7 +21,8 @@ try:
         supabase_key=os.getenv("SUPABASE_KEY"),
         supabase_url=os.getenv("SUPABASE_URL"),
     )
-    bets_table = supabase_client.table(table_name=config.get("database", "bets_table"))
+    bets_table = supabase_client.table(
+        table_name=config.get("database", "bets_table"))
     leagues_table = supabase_client.table(
         table_name=config.get("database", "leagues_table")
     )
@@ -28,6 +31,9 @@ try:
     )
     double_points_table = supabase_client.table(
         table_name=config.get("database", "double_points_table")
+    )
+    match_links_table = supabase_client.table(
+        table_name="matchLinks"
     )
     scheduled_match_statuses = ["NS", "TBD"]
     regular_time_match_statuses = ["1H", "HT", "2H"]
@@ -61,12 +67,15 @@ def insert_bet(
     }
     try:
         # Insert the bet
-        response = bets_table.upsert(bet_data, on_conflict="match_id,user_id").execute()
+        response = bets_table.upsert(
+            bet_data, on_conflict="match_id,user_id").execute()
         bet_id = response.data[0]["id"]
         # Calculate how many double points the user has used on other bets
-        MAX_NUMBER_DOUBLE_POINTS = config.getint("default", "max_number_wildcards")
+        MAX_NUMBER_DOUBLE_POINTS = config.getint(
+            "default", "max_number_wildcards")
         current_double_points = (
-            double_points_table.select("bet_id").eq("user_id", user_id).execute().data
+            double_points_table.select("bet_id").eq(
+                "user_id", user_id).execute().data
         )
         num_double_points_used = len(
             [dp for dp in current_double_points if dp["bet_id"] != bet_id]
@@ -107,7 +116,8 @@ def insert_bet(
 def upsert_fixtures(force: bool = False) -> list[dict]:
     def process_fixture(fixture: dict) -> dict:
         fixture_status = fixture["fixture"]["status"]["short"]
-        match_start_time = datetime.datetime.fromisoformat(fixture["fixture"]["date"])
+        match_start_time = datetime.datetime.fromisoformat(
+            fixture["fixture"]["date"])
         # Users can only place bets if the match is scheduled and the start time is in the future
         if (fixture_status not in scheduled_match_statuses) or (
             fixture_status in scheduled_match_statuses
@@ -145,14 +155,17 @@ def upsert_fixtures(force: bool = False) -> list[dict]:
             params=query_params,
         )
         response_data = response.json()["response"]
-        processed_fixtures = [process_fixture(fixture) for fixture in response_data]
+        processed_fixtures = [process_fixture(
+            fixture) for fixture in response_data]
         return processed_fixtures
 
     # Get a list of all of the leagues we are tracking
-    tracked_leagues = leagues_table.select("*").eq("update_matches", True).execute()
+    tracked_leagues = leagues_table.select(
+        "*").eq("update_matches", True).execute()
     # If not Force, we only want to download fixtures if there are ongoing matches
     if not force:
-        previously_downloaded_fixtures = matches_table.select("*").execute().data
+        previously_downloaded_fixtures = matches_table.select(
+            "*").execute().data
         # Check if there are any ongoing matches, e.g. matches that have status in ongoing_match_statuses or matches that are scheduled to start now
         ongoing_matches = [
             match
@@ -279,7 +292,7 @@ def calculate_current_standings() -> list[dict]:
                     points *= 2
                 user_potential_points_mapping[user_id] += points
         return user_potential_points_mapping
-    
+
     def calculate_user_points_in_last_n_finished_matches(
         matches_and_bets: list[dict],
         user_ids: list[str],
@@ -303,7 +316,8 @@ def calculate_current_standings() -> list[dict]:
                 user_id = bet["user_id"]
                 users_who_placed_bets_in_match.append(user_id)
                 if user_id not in user_points_in_last_n_finished_matches_mapping:
-                    user_points_in_last_n_finished_matches_mapping[user_id] = []
+                    user_points_in_last_n_finished_matches_mapping[user_id] = [
+                    ]
                 predicted_home_goals = bet["predicted_home_goals"]
                 predicted_away_goals = bet["predicted_away_goals"]
                 points = calculate_bet_points(
@@ -315,7 +329,8 @@ def calculate_current_standings() -> list[dict]:
                 has_double_points = len(bet.get("doublePoints", [])) > 0
                 if has_double_points:
                     points *= 2
-                user_points_in_last_n_finished_matches_mapping[user_id].append(points)
+                user_points_in_last_n_finished_matches_mapping[user_id].append(
+                    points)
             users_who_did_not_place_bets_in_match = [
                 user_id
                 for user_id in user_ids
@@ -323,8 +338,10 @@ def calculate_current_standings() -> list[dict]:
             ]
             for user_id in users_who_did_not_place_bets_in_match:
                 if user_id not in user_points_in_last_n_finished_matches_mapping:
-                    user_points_in_last_n_finished_matches_mapping[user_id] = []
-                user_points_in_last_n_finished_matches_mapping[user_id].append(0)
+                    user_points_in_last_n_finished_matches_mapping[user_id] = [
+                    ]
+                user_points_in_last_n_finished_matches_mapping[user_id].append(
+                    0)
         # Reverse the lists so that the most recent match is last
         for user_id in user_points_in_last_n_finished_matches_mapping:
             user_points_in_last_n_finished_matches_mapping[user_id].reverse()
@@ -336,7 +353,7 @@ def calculate_current_standings() -> list[dict]:
             if match["status"] in scheduled_match_statuses:
                 continue
             for bet in match["bets"]:
-                if len(bet.get("doublePoints", []))==0:
+                if len(bet.get("doublePoints", [])) == 0:
                     continue
                 user_id = bet["user_id"]
                 if user_id not in user_double_points_mapping:
@@ -358,13 +375,17 @@ def calculate_current_standings() -> list[dict]:
     }
     user_ids = list(users.keys())
     user_points_mapping = calculate_user_points(matches_and_bets)
-    user_potential_points_mapping = calculate_user_potential_points(matches_and_bets)
+    user_potential_points_mapping = calculate_user_potential_points(
+        matches_and_bets)
     user_points_in_last_n_finished_matches_mapping = (
-        calculate_user_points_in_last_n_finished_matches(matches_and_bets, user_ids, 5)
+        calculate_user_points_in_last_n_finished_matches(
+            matches_and_bets, user_ids, 5)
     )
-    user_double_points_mapping = calculate_num_double_points_used(matches_and_bets)
+    user_double_points_mapping = calculate_num_double_points_used(
+        matches_and_bets)
     # Create the standings list
-    num_double_points_allowed = config.getint("default", "max_number_wildcards")
+    num_double_points_allowed = config.getint(
+        "default", "max_number_wildcards")
     standings = []
     for user_id in user_ids:
         standings.append(
@@ -380,7 +401,8 @@ def calculate_current_standings() -> list[dict]:
             }
         )
     # Rank the standings by total points + potential points
-    standings.sort(key=lambda x: (-(x["points"] + x["potential_points"]), x["name"].lower()), reverse=False)
+    standings.sort(
+        key=lambda x: (-(x["points"] + x["potential_points"]), x["name"].lower()), reverse=False)
     for index, entry in enumerate(standings):
         entry["rank"] = index + 1
     return standings
@@ -389,7 +411,8 @@ def calculate_current_standings() -> list[dict]:
 @functools.lru_cache(maxsize=100)
 def get_user_bets_handler(user_id: str) -> list[dict]:
     user_bets = (
-        bets_table.select("*", "doublePoints(*)").eq("user_id", user_id).execute().data
+        bets_table.select("*", "doublePoints(*)").eq("user_id",
+                                                     user_id).execute().data
     )
     processed_user_bets = []
     for bet in user_bets:
@@ -410,7 +433,8 @@ def get_matches_handler(
 ) -> dict[str, list[dict]]:
     # Only show matches that are in dates between now - show_matches_n_days_behind and now + show_matches_n_days_ahead
     matches_and_bets = (
-        matches_table.select("*, bets(*, doublePoints(id)), leagues(name)")
+        matches_table.select(
+            "*, bets(*, doublePoints(id)), leagues(name), matchLinks(url)")
         .eq("show", True)
         .gte(
             "start_time",
@@ -452,7 +476,8 @@ def get_matches_handler(
         if "bets" not in match:
             continue
         for bet in match["bets"]:
-            bet["user"] = {"name": users.get(bet["user_id"], "User: " + bet["user_id"])}
+            bet["user"] = {"name": users.get(
+                bet["user_id"], "User: " + bet["user_id"])}
     # Sort finished matches by start_time descending
     finished_matches = [
         match
@@ -460,13 +485,81 @@ def get_matches_handler(
         if match["status"] in finished_match_statuses
     ]
     for match in finished_matches:
+        match.pop("matchLinks", None)
+    for match in finished_matches:
         if "bets" not in match:
             continue
         for bet in match["bets"]:
-            bet["user"] = {"name": users.get(bet["user_id"], "User: " + bet["user_id"])}
+            bet["user"] = {"name": users.get(
+                bet["user_id"], "User: " + bet["user_id"])}
     finished_matches.sort(key=lambda x: x["start_time"], reverse=True)
     return {
         "ongoing": ongoing_matches,
         "upcoming": upcoming_matches,
         "finished": finished_matches,
+    }
+
+
+def upsert_fixture_links():
+    todays_date = datetime.datetime.today()
+    tomorrows_date = todays_date + datetime.timedelta(days=1)
+    todays_upcoming_or_ongoing_matches = (matches_table
+        .select("*")
+        .gte("start_time", todays_date.isoformat())
+        .lt("start_time", tomorrows_date.isoformat())
+        .in_("status", ongoing_match_statuses+scheduled_match_statuses)
+        .execute()
+        .data
+    )
+    if len(todays_upcoming_or_ongoing_matches) == 0:
+        return {
+            "updated_match_ids": [],
+        }
+    response = requests.get("https://www.redditsoccerstreams.name/")
+    response_html = bs4.BeautifulSoup(response.text, features="html.parser")
+    matches_and_links = {}
+    for tr in response_html.find("table").find_all("tr"):
+        tds = tr.find_all("td")
+        if len(tds) == 3:
+            match = tds[1].get_text(strip=True)
+            match_hash = hashlib.sha256(match.encode()).hexdigest()
+            team_names = match.split(" vs ", maxsplit=1)
+            if len(team_names) != 2:
+                continue
+            home_team_name = team_names[0]
+            away_team_name = team_names[1]
+            if match_hash not in matches_and_links:
+                matches_and_links[match_hash] = {
+                    "home_team_name": home_team_name,
+                    "away_team_name": away_team_name,
+                    "links": [],
+                }
+            link = tds[2].find("a")["href"] if tds[2].find("a") else None
+            if link is None:
+                continue
+            matches_and_links[match_hash]["links"].append(link)
+    updated_match_ids = []
+    for _, details in matches_and_links.items():
+        home_team_name = details["home_team_name"]
+        away_team_name = details["away_team_name"]
+        match_id = None
+        for match in todays_upcoming_or_ongoing_matches:
+            if match["home_team_name"] == home_team_name:
+                match_id = match["id"]
+                break
+            elif match["away_team_name"] == away_team_name:
+                match_id = match["id"]
+                break
+            else:
+                continue
+        if not match_id:
+            continue
+        for link in details["links"]:
+            match_links_table.upsert(
+                {"match_id": match_id, "url": link}, on_conflict="match_id,url"
+            ).execute()
+        updated_match_ids.append(match_id)
+    get_matches_handler.cache_clear()
+    return {
+        "updated_match_ids": updated_match_ids,
     }
