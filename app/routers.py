@@ -22,7 +22,7 @@ def signup_form(request: Request):
     if access_token:
         response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
         return response
-    return templates.TemplateResponse("signup.html", {"request": request})
+    return templates.TemplateResponse(request, "signup.html")
 
 
 @auth_router.post("/signup")
@@ -50,7 +50,7 @@ def login_form(request: Request):
     if access_token:
         response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
         return response
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
 
 
 @auth_router.post("/login")
@@ -83,7 +83,7 @@ def logout(_: Request):
 
 @auth_router.get("/reset-password")
 def reset_password_form(request: Request):
-    return templates.TemplateResponse("reset-password.html", {"request": request})
+    return templates.TemplateResponse(request, "reset-password.html")
 
 
 @auth_router.post("/reset-password")
@@ -98,7 +98,7 @@ def reset_password(email: str = Form(...)):
 
 @auth_router.get("/change-password")
 def change_password_form(request: Request):
-    return templates.TemplateResponse("change-password.html", {"request": request})
+    return templates.TemplateResponse(request, "change-password.html")
 
 
 @auth_router.post("/change-password")
@@ -151,7 +151,7 @@ def read_root(request: Request):
         logging.exception(e)
         if "access_token" in request.cookies:
             del request.cookies["access_token"]
-        response = templates.TemplateResponse("login.html", {"request": request})
+        response = templates.TemplateResponse(request, "login.html")
         return response
 
 
@@ -172,9 +172,9 @@ def get_settings(request: Request):
             username = user.user_metadata.get("username", None)
             break
     return templates.TemplateResponse(
+        request,
         "settings.html",
         {
-            "request": request,
             "username": username,
         },
     )
@@ -182,7 +182,7 @@ def get_settings(request: Request):
 
 @app_router.get("/rules")
 async def get_rules(request: Request):
-    return templates.TemplateResponse("rules.html", {"request": request})
+    return templates.TemplateResponse(request, "rules.html")
 
 
 @app_router.get("/matches")
