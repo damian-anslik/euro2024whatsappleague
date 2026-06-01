@@ -140,9 +140,9 @@ def read_root(request: Request):
         _ = auth.check_user_session(access_token)
         league_standings = handlers.calculate_current_standings()
         response = templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
+            request=request,
+            name="index.html",
+            context={
                 "standings": league_standings,
             },
         )
