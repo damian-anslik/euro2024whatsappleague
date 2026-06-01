@@ -18,7 +18,7 @@ try:
     config = configparser.ConfigParser()
     config.read("config.ini")
     supabase_client = supabase.create_client(
-        supabase_key=os.getenv("SUPABASE_KEY"),
+        supabase_key=os.getenv("SUPABASE_ADMIN_KEY"),
         supabase_url=os.getenv("SUPABASE_URL"),
     )
     bets_table = supabase_client.table(
@@ -499,74 +499,74 @@ def get_matches_handler(
         "finished": finished_matches,
     }
 
-@functools.lru_cache()
-def get_iframe_url(url: str):
-    response = requests.get(url)
-    response_html = bs4.BeautifulSoup(response.text, features="html.parser")
-    iframe = response_html.find("iframe")
-    iframe_src = iframe["src"]
-    return iframe_src
+# @functools.lru_cache()
+# def get_iframe_url(url: str):
+#     response = requests.get(url)
+#     response_html = bs4.BeautifulSoup(response.text, features="html.parser")
+#     iframe = response_html.find("iframe")
+#     iframe_src = iframe["src"]
+#     return iframe_src
 
-def upsert_fixture_links():
-    todays_date = datetime.datetime.today()
-    tomorrows_date = todays_date + datetime.timedelta(days=1)
-    todays_upcoming_or_ongoing_matches = (matches_table
-        .select("*")
-        .gte("start_time", todays_date.isoformat())
-        .lt("start_time", tomorrows_date.isoformat())
-        .in_("status", ongoing_match_statuses+scheduled_match_statuses)
-        .execute()
-        .data
-    )
-    if len(todays_upcoming_or_ongoing_matches) == 0:
-        return {
-            "updated_match_ids": [],
-        }
-    response = requests.get("https://www.redditsoccerstreams.name/")
-    response_html = bs4.BeautifulSoup(response.text, features="html.parser")
-    matches_and_links = {}
-    for tr in response_html.find("table").find_all("tr"):
-        tds = tr.find_all("td")
-        if len(tds) == 3:
-            match = tds[1].get_text(strip=True)
-            match_hash = hashlib.sha256(match.encode()).hexdigest()
-            team_names = match.split(" vs ", maxsplit=1)
-            if len(team_names) != 2:
-                continue
-            home_team_name = team_names[0]
-            away_team_name = team_names[1]
-            if match_hash not in matches_and_links:
-                matches_and_links[match_hash] = {
-                    "home_team_name": home_team_name,
-                    "away_team_name": away_team_name,
-                    "links": [],
-                }
-            link = tds[2].find("a")["href"] if tds[2].find("a") else None
-            if link is None:
-                continue
-            matches_and_links[match_hash]["links"].append(link)
-    updated_match_ids = []
-    for _, details in matches_and_links.items():
-        home_team_name = details["home_team_name"]
-        away_team_name = details["away_team_name"]
-        match_id = None
-        for match in todays_upcoming_or_ongoing_matches:
-            if match["home_team_name"] == home_team_name:
-                match_id = match["id"]
-                break
-            elif match["away_team_name"] == away_team_name:
-                match_id = match["id"]
-                break
-            else:
-                continue
-        if not match_id:
-            continue
-        for link in details["links"]:
-            match_links_table.upsert(
-                {"match_id": match_id, "url": link}, on_conflict="match_id,url"
-            ).execute()
-        updated_match_ids.append(match_id)
-    get_matches_handler.cache_clear()
-    return {
-        "updated_match_ids": updated_match_ids,
-    }
+# def upsert_fixture_links():
+#     todays_date = datetime.datetime.today()
+#     tomorrows_date = todays_date + datetime.timedelta(days=1)
+#     todays_upcoming_or_ongoing_matches = (matches_table
+#         .select("*")
+#         .gte("start_time", todays_date.isoformat())
+#         .lt("start_time", tomorrows_date.isoformat())
+#         .in_("status", ongoing_match_statuses+scheduled_match_statuses)
+#         .execute()
+#         .data
+#     )
+#     if len(todays_upcoming_or_ongoing_matches) == 0:
+#         return {
+#             "updated_match_ids": [],
+#         }
+#     response = requests.get("https://www.redditsoccerstreams.name/")
+#     response_html = bs4.BeautifulSoup(response.text, features="html.parser")
+#     matches_and_links = {}
+#     for tr in response_html.find("table").find_all("tr"):
+#         tds = tr.find_all("td")
+#         if len(tds) == 3:
+#             match = tds[1].get_text(strip=True)
+#             match_hash = hashlib.sha256(match.encode()).hexdigest()
+#             team_names = match.split(" vs ", maxsplit=1)
+#             if len(team_names) != 2:
+#                 continue
+#             home_team_name = team_names[0]
+#             away_team_name = team_names[1]
+#             if match_hash not in matches_and_links:
+#                 matches_and_links[match_hash] = {
+#                     "home_team_name": home_team_name,
+#                     "away_team_name": away_team_name,
+#                     "links": [],
+#                 }
+#             link = tds[2].find("a")["href"] if tds[2].find("a") else None
+#             if link is None:
+#                 continue
+#             matches_and_links[match_hash]["links"].append(link)
+#     updated_match_ids = []
+#     for _, details in matches_and_links.items():
+#         home_team_name = details["home_team_name"]
+#         away_team_name = details["away_team_name"]
+#         match_id = None
+#         for match in todays_upcoming_or_ongoing_matches:
+#             if match["home_team_name"] == home_team_name:
+#                 match_id = match["id"]
+#                 break
+#             elif match["away_team_name"] == away_team_name:
+#                 match_id = match["id"]
+#                 break
+#             else:
+#                 continue
+#         if not match_id:
+#             continue
+#         for link in details["links"]:
+#             match_links_table.upsert(
+#                 {"match_id": match_id, "url": link}, on_conflict="match_id,url"
+#             ).execute()
+#         updated_match_ids.append(match_id)
+#     get_matches_handler.cache_clear()
+#     return {
+#         "updated_match_ids": updated_match_ids,
+#     }

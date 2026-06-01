@@ -242,13 +242,14 @@ def place_bet(
         logging.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
 
-@app_router.get("/fixtures/links/iframe/source")
-async def get_iframe_source(url: str):
-    print(url)
-    iframe_source = handlers.get_iframe_url(url=url)
-    return {
-        "iframeSrc": iframe_source,
-    }
+
+# @app_router.get("/fixtures/links/iframe/source")
+# async def get_iframe_source(url: str):
+#     print(url)
+#     iframe_source = handlers.get_iframe_url(url=url)
+#     return {
+#         "iframeSrc": iframe_source,
+#     }
 
 # Admin Routes
 
@@ -260,8 +261,8 @@ def update_fixtures(force: bool = False, request: Request = None):
     return update_response
 
 
-@admin_router.get("/fixtures/links/update")
-def update_fixture_links(request: Request = None):
-    update_response = handlers.upsert_fixture_links()
-    return update_response
+# @admin_router.get("/fixtures/links/update")
+# def update_fixture_links(request: Request = None):
+#     update_response = handlers.upsert_fixture_links()
+#     return update_response
 
