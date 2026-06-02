@@ -90,7 +90,7 @@ def send_password_reset_request(email: str):
     supabase_public_client.auth.reset_password_email(
         email=email,
         options={
-            "redirect_to": "https://championsleague.up.railway.app/change-password"
+            "redirect_to": "https://worldcup26.up.railway.app/change-password"
         },
     )
 
