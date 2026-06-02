@@ -390,3 +390,45 @@ header div#header-right {
 .download-button {
   margin-bottom: 1rem;
 }
+
+/* Hamburger Menu Button */
+.hamburger {
+  display: none;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Mobile Navigation Breakpoint */
+@media (max-width: 768px) {
+  .hamburger {
+    display: block;
+  }
+
+  header div#header-right {
+    display: none; /* Hide links by default on mobile */
+    flex-direction: column;
+    position: absolute;
+    top: 100%; /* Position directly below the header */
+    left: 0;
+    width: 100%;
+    background-color: #0e1e5b; /* Matches your header color */
+    padding-block: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  header div#header-right.active {
+    display: flex;
+  }
+
+  header div#header-right a {
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem 0;
+  }
+}
