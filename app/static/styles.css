@@ -344,7 +344,7 @@ span#incorrect {
 header {
   display: flex;
   flex-direction: row;
-  background-color: #0e1e5b;
+  background-color: #0fc8ce;
   color: white;
   width: 100%;
   position: sticky;
