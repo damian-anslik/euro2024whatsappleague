@@ -48,11 +48,11 @@ main {
 
 .login-form .form-group input {
   padding: 0.5rem;
-  border: 1px solid #0e1e5b;
+  border: 1px solid #000;
 }
 
 .login-form button {
-  background-color: #0e1e5b;
+  background-color: #000;
   color: white;
   border: none;
   padding: 0.5rem;
@@ -63,7 +63,7 @@ main {
   display: block;
   text-align: center;
   padding: 0.5rem;
-  background-color: #0e1e5b;
+  background-color: #000;
   color: white;
   text-decoration: none;
   font-size: 0.8rem;
@@ -75,7 +75,7 @@ form {
 }
 
 form > button:disabled {
-  background-color: #ccc;
+  background-color: #aaa;
   color: #666;
   cursor: not-allowed;
 }
@@ -88,7 +88,7 @@ form > button:disabled {
 .fixture-info {
   display: flex;
   flex-direction: column;
-  border: 1px solid #0e1e5b;
+  border: 1px solid #000;
   margin-bottom: 0.5rem;
   padding: 1rem;
   font-size: 0.8rem;
@@ -97,7 +97,7 @@ form > button:disabled {
 
 .fixture-info.ongoing {
   opacity: 0.75;
-  border: 1px solid #0e1e5b;
+  border: 1px solid #000;
   position: relative;
 }
 
@@ -109,11 +109,11 @@ form > button:disabled {
 
 .fixture-info.disabled {
   opacity: 0.5;
-  border: 1px solid #ccc;
+  border: 1px solid #aaa;
 }
 
 .fixture-info.disabled input {
-  border: 1px solid #ccc;
+  border: 1px solid #aaa;
 }
 
 .fixture-scores {
@@ -149,7 +149,7 @@ form > button:disabled {
 }
 
 .bet-button {
-  background-color: #0e1e5b;
+  background-color: #000;
   color: white;
   border: none;
   padding: 0.5rem;
@@ -164,13 +164,13 @@ form > button:disabled {
 
 .bet-form input {
   padding: 0.5rem;
-  border: 1px solid #0e1e5b;
+  border: 1px solid #000;
 }
 
 .bet-form button,
 .show-bets-button,
 .show-match-links-button {
-  background-color: #0e1e5b;
+  background-color: #000;
   color: white;
   border: none;
   padding: 0.5rem;
@@ -189,7 +189,7 @@ form > button:disabled {
 }
 
 .bet-form button:disabled {
-  background-color: #ccc;
+  background-color: #aaa;
   color: #666;
   cursor: not-allowed;
 }
@@ -199,7 +199,7 @@ form > button:disabled {
   justify-content: center;
   align-items: center;
   height: 100%;
-  border: 1px solid #0e1e5b;
+  border: 1px solid #000;
   padding: 1rem;
   font-size: 0.8rem;
 }
@@ -282,11 +282,11 @@ table {
   border-collapse: collapse;
   /* border-style: ; */
   font-size: 0.8rem;
-  box-shadow: 0 0 0 1px #0e1e5b;
+  box-shadow: 0 0 0 1px #000;
 }
 
 thead {
-  border-bottom: 1px solid #0e1e5b;
+  border-bottom: 1px solid #000;
   border-top-left-radius: 0.5rem;
   border-top-right-radius: 0.5rem;
 }
@@ -295,12 +295,12 @@ th,
 td {
   padding: 0.5rem;
   text-align: left;
-  border: 1px solid #0e1e5b;
+  border: 1px solid #000;
   white-space: nowrap;
 }
 
 th {
-  background-color: #0e1e5b;
+  background-color: #000;
   color: white;
 }
 
@@ -329,7 +329,7 @@ span#correct-score {
 }
 
 span#correct-margin {
-  background-color: #0e1e5b;
+  background-color: #000;
 }
 
 span#correct-winner {
@@ -344,7 +344,7 @@ span#incorrect {
 header {
   display: flex;
   flex-direction: row;
-  background-color: #0fc8ce;
+  background-color: #000;
   color: white;
   width: 100%;
   position: sticky;
@@ -384,7 +384,7 @@ header div#header-right {
 }
 
 #wildcard-toggle:disabled {
-  border: 1px solid #ccc;
+  border: 1px solid #aaa;
 }
 
 .download-button {
@@ -422,7 +422,7 @@ header div#header-right {
     top: 100%; /* Position directly below the header */
     left: 0;
     width: 100%;
-    background-color: #0e1e5b; /* Matches your header color */
+    background-color: #000; /* Matches your header color */
     padding-block: 1rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
     align-items: center;
