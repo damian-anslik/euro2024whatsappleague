@@ -210,6 +210,7 @@ const renderMatchDetails = (matchData, userMatchBet, isOngoing, isUpcoming) => {
   fixtureTime.innerText = {
     TBD: "Time To Be Decided",
     NS: formatDate(timestamp),
+    PST: "Postponed",
     "1H": "First Half",
     HT: "Half Time",
     "2H": "Second Half",
