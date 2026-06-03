@@ -35,7 +35,7 @@ try:
     match_links_table = supabase_client.table(
         table_name="matchLinks"
     )
-    scheduled_match_statuses = ["NS", "TBD"]
+    scheduled_match_statuses = ["NS", "TBD", "PST"]
     regular_time_match_statuses = ["1H", "HT", "2H"]
     extra_time_match_statuses = ["ET", "BT", "P", "INT"]
     special_match_statuses = ["INT"]
