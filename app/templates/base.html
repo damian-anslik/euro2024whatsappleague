@@ -34,14 +34,18 @@
         {% block content %}
         {% endblock %}
     </main>
-
     <script>
-        // Toggle mobile menu visibility
+        // Toggle mobile menu visibility and icon
         const hamburger = document.getElementById('hamburger-btn');
         const navLinks = document.getElementById('header-right');
-
         hamburger.addEventListener('click', () => {
             navLinks.classList.toggle('active');
+            // Swap icon between hamburger and 'X'
+            if (navLinks.classList.contains('active')) {
+                hamburger.innerHTML = '&times;';
+            } else {
+                hamburger.innerHTML = '&#9776;';
+            }
         });
     </script>
 </body>
