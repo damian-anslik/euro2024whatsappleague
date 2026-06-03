@@ -391,7 +391,6 @@ header div#header-right {
   margin-bottom: 1rem;
 }
 
-/* Hamburger Menu Button */
 .hamburger {
   display: none;
   background: transparent;
@@ -400,12 +399,20 @@ header div#header-right {
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0;
+  
+  /* Add fixed dimensions to prevent resizing */
+  width: 30px;
+  height: 30px;
+  line-height: 1;
 }
 
 /* Mobile Navigation Breakpoint */
 @media (max-width: 768px) {
   .hamburger {
-    display: block;
+    /* Use flex to perfectly center both icons inside the fixed box */
+    display: flex; 
+    align-items: center;
+    justify-content: center;
   }
 
   header div#header-right {
