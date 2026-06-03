@@ -21,8 +21,8 @@
             <div id="header-right" class="nav-links">
                 <a href="/rules">Rules</a>
                 {% if request.cookies.get('access_token') %}
-                <a href="/logout">Logout</a>
                 <a href="/settings">Settings</a>
+                <a href="/logout">Logout</a>
                 {% else %}
                 <a href="/login">Login</a>
                 <a href="/signup">Sign Up</a>
