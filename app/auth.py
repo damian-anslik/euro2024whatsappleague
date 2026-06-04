@@ -53,10 +53,13 @@ def check_user_session(access_token: str) -> str:
 def signup(email: str, username: str, password: str) -> str:
     try:
         # Check username is available
+        cleaned_username = username.strip()
+        if not cleaned_username:
+            raise ValueError("Username cannot be empty")
         users = list_users()
         is_username_taken = any(
             [
-                user.user_metadata["username"] == username
+                user.user_metadata["username"] == cleaned_username
                 for user in users
             ]
         )
@@ -66,7 +69,7 @@ def signup(email: str, username: str, password: str) -> str:
             {
                 "email": email,
                 "password": password,
-                "options": {"data": {"username": username}},
+                "options": {"data": {"username": cleaned_username}},
             }
         )
         list_users.cache_clear()
@@ -102,6 +105,9 @@ def change_password(user_id: str, password: str):
 
 def update_username(user_id: str, new_username: str):
     # Check username is available
+    cleaned_new_username = new_username.strip()
+    if not cleaned_new_username:
+        raise ValueError("Username cannot be empty")
     users = list_users()
     for user in users:
         if user.id == user_id:
@@ -109,18 +115,18 @@ def update_username(user_id: str, new_username: str):
             break
     if not current_username:
         raise ValueError("User not found")
-    if new_username == current_username:
+    if cleaned_new_username == current_username:
         raise ValueError("New username is the same as current username")
-    is_username_taken = any(
-        [
-            user.user_metadata["username"] == new_username
-            for user in users
-        ]
-    )
+    is_username_taken = False
+    for user in users:
+        username = user.user_metadata.get("username", None)
+        if username and username.strip() == cleaned_new_username:
+            is_username_taken = True
+            break
     if is_username_taken:
         raise ValueError("Username is already taken")
     supabase_admin_client.auth.admin.update_user_by_id(
-        uid=user_id, attributes={"user_metadata": {"username": new_username}}
+        uid=user_id, attributes={"user_metadata": {"username": cleaned_new_username}}
     )
     list_users.cache_clear()
     app.handlers.calculate_current_standings.cache_clear()
