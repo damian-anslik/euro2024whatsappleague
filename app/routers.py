@@ -127,6 +127,21 @@ def update_username(request: Request, username: str = Form(...)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@auth_router.post("/update-email")
+def update_email(request: Request, email: str = Form(...)):
+    access_token = request.cookies.get("access_token", None)
+    if not access_token:
+        response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        return response
+    try:
+        user_id = auth.check_user_session(access_token)
+        auth.update_email(user_id=user_id, new_email=email)
+        return {"message": "Email updated successfully."}
+    except ValueError as e:
+        logging.error(f"Error updating email: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 # Application Routes
 
 
@@ -170,12 +185,14 @@ def get_settings(request: Request):
     for user in users:
         if user.id == user_id:
             username = user.user_metadata.get("username", None)
+            email = user.email
             break
     return templates.TemplateResponse(
         request,
         "settings.html",
         {
             "username": username,
+            "email": email,
         },
     )
 

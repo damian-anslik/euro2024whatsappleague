@@ -12,18 +12,39 @@
             <input type="text" class="form-control" id="username" name="username" value="{{ username }}"
                 style="width: 100%; padding: 8px; box-sizing: border-box;" required>
         </div>
-        <button type="submit" class="btn btn-primary"
+        <button type="submit" class="btn btn-primary" id="change-username-btn"
             style="margin-top: 10px; color: #fff; background-color: #000; padding: 0.5rem;">Change username</button>
+    </form>
+    <h2>Change email</h2>
+    <div class="success-container"></div>
+    <div class="error-container"></div>
+    <form id="change-email-form">
+        <!-- Style the form so that field name is above the field -->
+        <div class="form-group">
+            <label for="email" style="display: block; margin-bottom: 5px;">Email</label>
+            <input type="email" class="form-control" id="email" name="email" value="{{ email }}"
+                style="width: 100%; padding: 8px; box-sizing: border-box;" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="change-email-btn"
+            style="margin-top: 10px; color: #fff; background-color: #000; padding: 0.5rem;">Change email</button>
     </form>
 </div>
 <script>
+    const onSubmitStyles = {
+        disabled: true,
+        text: 'Updating...',
+        opacity: 0.6
+    };
     let successMessage = document.querySelector('.success-container');
     let errorMessage = document.querySelector('.error-container');
-    let submitButton = document.querySelector('button[type="submit"]');
     document.querySelector('#change-username-form').addEventListener('submit', async function (event) {
+        let submitButton = document.querySelector('#change-username-btn');
+        // Apply onSubmitStyles to submitButton
+        submitButton.disabled = onSubmitStyles.disabled;
+        submitButton.textContent = onSubmitStyles.text;
+        submitButton.style.opacity = onSubmitStyles.opacity;
+
         errorMessage.style.display = 'none';
-        submitButton.disabled = true;
-        submitButton.textContent = 'Updating...';
         event.preventDefault();
         const username = document.querySelector('input[name="username"]').value;
         const form = new FormData();
@@ -50,6 +71,42 @@
         }
         submitButton.disabled = false;
         submitButton.textContent = 'Change username';
+        submitButton.style.opacity = '1';
+    });
+    document.querySelector('#change-email-form').addEventListener('submit', async function (event) {
+        let submitButton = document.querySelector('#change-email-btn');
+        errorMessage.style.display = 'none';
+        // Apply onSubmitStyles to submitButton
+        submitButton.disabled = onSubmitStyles.disabled;
+        submitButton.textContent = onSubmitStyles.text;
+        submitButton.style.opacity = onSubmitStyles.opacity;
+        event.preventDefault();
+        const email = document.querySelector('input[name="email"]').value;
+        const form = new FormData();
+        form.append('email', email);
+        let response = await fetch('/update-email', {
+            method: 'POST',
+            body: form,
+            redirect: 'follow'
+        })
+        // If the response is OK, show success message
+        // Else show error message
+        if (response.ok) {
+            successMessage.textContent = 'Email updated successfully';
+            successMessage.style.display = 'block';
+            successMessage.style.marginBottom = '10px';
+            errorMessage.style.display = 'none';
+        } else {
+            // Error message is in JSON detail field
+            responseJSON = await response.json();
+            errorMessage.textContent = responseJSON.detail || 'Error updating email';
+            errorMessage.style.display = 'block';
+            errorMessage.style.marginBottom = '10px';
+            successMessage.style.display = 'none';
+        }
+        submitButton.disabled = false;
+        submitButton.textContent = 'Change email';
+        submitButton.style.opacity = '1';
     });
 </script>
 {% endblock %}

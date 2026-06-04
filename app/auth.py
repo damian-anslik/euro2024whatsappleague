@@ -25,7 +25,7 @@ supabase_public_client = supabase.create_client(
 @functools.lru_cache(maxsize=1)
 def list_users():
     return supabase_admin_client.auth.admin.list_users()
-    
+
 
 def check_user_session(access_token: str) -> str:
     if "." in access_token:
@@ -53,10 +53,11 @@ def check_user_session(access_token: str) -> str:
 def signup(email: str, username: str, password: str) -> str:
     try:
         # Check username is available
+        users = list_users()
         is_username_taken = any(
             [
                 user.user_metadata["username"] == username
-                for user in supabase_admin_client.auth.admin.list_users()
+                for user in users
             ]
         )
         if is_username_taken:
@@ -88,10 +89,7 @@ def login(email: str, password: str) -> str:
 
 def send_password_reset_request(email: str):
     supabase_public_client.auth.reset_password_email(
-        email=email,
-        options={
-            "redirect_to": "https://worldcup26.up.railway.app/change-password"
-        },
+        email=email
     )
 
 
@@ -104,10 +102,19 @@ def change_password(user_id: str, password: str):
 
 def update_username(user_id: str, new_username: str):
     # Check username is available
+    users = list_users()
+    for user in users:
+        if user.id == user_id:
+            current_username = user.user_metadata.get("username", None)
+            break
+    if not current_username:
+        raise ValueError("User not found")
+    if new_username == current_username:
+        raise ValueError("New username is the same as current username")
     is_username_taken = any(
         [
             user.user_metadata["username"] == new_username
-            for user in supabase_admin_client.auth.admin.list_users()
+            for user in users
         ]
     )
     if is_username_taken:
@@ -118,3 +125,28 @@ def update_username(user_id: str, new_username: str):
     list_users.cache_clear()
     app.handlers.calculate_current_standings.cache_clear()
     app.handlers.get_matches_handler.cache_clear()
+
+
+def update_email(user_id: str, new_email: str):
+    # Check email is available
+    users = list_users()
+    for user in users:
+        if user.id == user_id:
+            current_email = user.email
+            break
+    if not current_email:
+        raise ValueError("User not found")
+    if new_email == current_email:
+        raise ValueError("New email is the same as current email")
+    is_email_taken = any(
+        [
+            user.email == new_email
+            for user in users
+        ]
+    )
+    if is_email_taken:
+        raise ValueError("Email is already taken")
+    supabase_admin_client.auth.admin.update_user_by_id(
+        uid=user_id, attributes={"email": new_email}
+    )
+    list_users.cache_clear()
