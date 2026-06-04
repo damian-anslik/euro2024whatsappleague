@@ -153,6 +153,7 @@ def upsert_fixtures(force: bool = False) -> list[dict]:
             url=request_url,
             headers=request_headers,
             params=query_params,
+            timeout=30,
         )
         response_data = response.json()["response"]
         processed_fixtures = [process_fixture(
