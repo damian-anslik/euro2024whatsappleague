@@ -50,21 +50,22 @@ def check_user_session(access_token: str) -> str:
     return user_id
 
 
-def signup(email: str, username: str, password: str) -> str:
-    try:
-        # Check username is available
-        cleaned_username = username.strip()
-        if not cleaned_username:
-            raise ValueError("Username cannot be empty")
-        users = list_users()
-        is_username_taken = any(
-            [
-                user.user_metadata["username"] == cleaned_username
-                for user in users
-            ]
-        )
-        if is_username_taken:
+def signup(email: str, username: str, password: str):
+    # 1. Local formatting validation
+    if "@" not in email or "." not in email:
+        raise ValueError("Invalid email address")
+    cleaned_username = username.strip()
+    if not cleaned_username:
+        raise ValueError("Username cannot be empty")
+    # 2. Fast-fail local uniqueness check
+    for user in list_users():
+        if user.email == email:
+            raise ValueError("Email is already taken")
+        existing_username = user.user_metadata.get("username", "").strip()
+        if existing_username == cleaned_username:
             raise ValueError("Username is already taken")
+    # 3. Network call
+    try:
         supabase_public_client.auth.sign_up(
             {
                 "email": email,
@@ -72,11 +73,12 @@ def signup(email: str, username: str, password: str) -> str:
                 "options": {"data": {"username": cleaned_username}},
             }
         )
+        # Invalidate caches to reflect the new user system-wide
         list_users.cache_clear()
         app.handlers.calculate_current_standings.cache_clear()
-        app.handlers.get_matches_handler.cache_clear()
+        app.handlers.get_matches_handler.cache_clear() 
     except gotrue.errors.AuthApiError as e:
-        raise ValueError(e)
+        raise ValueError(f"Signup failed: {e}") from e
 
 
 def login(email: str, password: str) -> str:
@@ -104,27 +106,17 @@ def change_password(user_id: str, password: str):
 
 
 def update_username(user_id: str, new_username: str):
-    # Check username is available
     cleaned_new_username = new_username.strip()
     if not cleaned_new_username:
         raise ValueError("Username cannot be empty")
-    users = list_users()
-    for user in users:
-        if user.id == user_id:
-            current_username = user.user_metadata.get("username", None)
-            break
-    if not current_username:
-        raise ValueError("User not found")
-    if cleaned_new_username == current_username:
-        raise ValueError("New username is the same as current username")
-    is_username_taken = False
-    for user in users:
-        username = user.user_metadata.get("username", None)
-        if username and username.strip() == cleaned_new_username:
-            is_username_taken = True
-            break
-    if is_username_taken:
-        raise ValueError("Username is already taken")
+    # Fast-fail local check
+    for user in list_users():
+        existing_username = user.user_metadata.get("username", "").strip()
+        if existing_username == cleaned_new_username:
+            if user.id == user_id:
+                raise ValueError("New username is the same as current username")
+            raise ValueError("Username is already taken")
+    # Proceed with network call
     supabase_admin_client.auth.admin.update_user_by_id(
         uid=user_id, attributes={"user_metadata": {"username": cleaned_new_username}}
     )
@@ -134,25 +126,17 @@ def update_username(user_id: str, new_username: str):
 
 
 def update_email(user_id: str, new_email: str):
-    # Check email is available
-    users = list_users()
-    for user in users:
-        if user.id == user_id:
-            current_email = user.email
-            break
-    if not current_email:
-        raise ValueError("User not found")
-    if new_email == current_email:
-        raise ValueError("New email is the same as current email")
-    is_email_taken = any(
-        [
-            user.email == new_email
-            for user in users
-        ]
-    )
-    if is_email_taken:
-        raise ValueError("Email is already taken")
+    cleaned_new_email = new_email.strip()
+    if "@" not in cleaned_new_email or "." not in cleaned_new_email:
+        raise ValueError("Invalid email address")
+    # Fast-fail local check
+    for user in list_users():
+        if user.email and user.email.strip() == cleaned_new_email:
+            if user.id == user_id:
+                raise ValueError("New email is the same as current email")
+            raise ValueError("Email is already taken")
+    # Proceed with network call
     supabase_admin_client.auth.admin.update_user_by_id(
-        uid=user_id, attributes={"email": new_email}
+        uid=user_id, attributes={"email": cleaned_new_email}
     )
     list_users.cache_clear()
