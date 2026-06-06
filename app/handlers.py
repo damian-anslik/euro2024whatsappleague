@@ -241,7 +241,7 @@ def calculate_bet_points(
 
 
 @functools.lru_cache(maxsize=1)
-def calculate_current_standings() -> list[dict]:
+def calculate_current_standings() -> tuple[list[dict], list[dict]]:
     def calculate_user_points(matches_and_bets: list[dict]) -> dict[str, int]:
         # Returns a dictionary mapping user_id to points
         user_points_mapping = {}
@@ -295,12 +295,13 @@ def calculate_current_standings() -> list[dict]:
         return user_potential_points_mapping
 
     def calculate_user_points_in_last_n_finished_matches(
-        matches_and_bets: list[dict],
-        user_ids: list[str],
-        n: int = 5,
-    ) -> dict[str, list[int]]:
-        # Returns a dictionary mapping user_id to a list of points in last n finished matches
-        user_points_in_last_n_finished_matches_mapping = {}
+    matches_and_bets: list[dict],
+    user_ids: list[str],
+    n: int = 5,
+) -> tuple[dict[str, list[int]], list[dict]]:
+        # Returns a tuple: (mapping of user_id to points, list of last N match details)
+        # Pre-initialize the mapping for all known users
+        user_points_in_last_n_finished_matches_mapping = {uid: [] for uid in user_ids}
         finished_matches = [
             match
             for match in matches_and_bets
@@ -311,14 +312,11 @@ def calculate_current_standings() -> list[dict]:
         for match in last_n_finished_matches:
             actual_home_goals = match["home_team_goals"]
             actual_away_goals = match["away_team_goals"]
-            # Track which users have placed bets in this match, if user did not place a bet, they get 0 points
-            users_who_placed_bets_in_match = []
-            for bet in match["bets"]:
+            # Track which users have placed bets in this match using a set for faster lookup
+            users_who_placed_bets_in_match = set()
+            for bet in match.get("bets", []):
                 user_id = bet["user_id"]
-                users_who_placed_bets_in_match.append(user_id)
-                if user_id not in user_points_in_last_n_finished_matches_mapping:
-                    user_points_in_last_n_finished_matches_mapping[user_id] = [
-                    ]
+                users_who_placed_bets_in_match.add(user_id)
                 predicted_home_goals = bet["predicted_home_goals"]
                 predicted_away_goals = bet["predicted_away_goals"]
                 points = calculate_bet_points(
@@ -330,23 +328,17 @@ def calculate_current_standings() -> list[dict]:
                 has_double_points = len(bet.get("doublePoints", [])) > 0
                 if has_double_points:
                     points *= 2
-                user_points_in_last_n_finished_matches_mapping[user_id].append(
-                    points)
-            users_who_did_not_place_bets_in_match = [
-                user_id
-                for user_id in user_ids
-                if user_id not in users_who_placed_bets_in_match
-            ]
-            for user_id in users_who_did_not_place_bets_in_match:
-                if user_id not in user_points_in_last_n_finished_matches_mapping:
-                    user_points_in_last_n_finished_matches_mapping[user_id] = [
-                    ]
-                user_points_in_last_n_finished_matches_mapping[user_id].append(
-                    0)
-        # Reverse the lists so that the most recent match is last
+                if user_id in user_points_in_last_n_finished_matches_mapping:
+                    user_points_in_last_n_finished_matches_mapping[user_id].append(points)
+            # Assign 0 to users who missed the bet
+            for user_id in user_ids:
+                if user_id not in users_who_placed_bets_in_match:
+                    user_points_in_last_n_finished_matches_mapping[user_id].append(0)
+        # Reverse the lists so that the most recent match is last (chronological order)
         for user_id in user_points_in_last_n_finished_matches_mapping:
             user_points_in_last_n_finished_matches_mapping[user_id].reverse()
-        return user_points_in_last_n_finished_matches_mapping
+        last_n_finished_matches.reverse()
+        return user_points_in_last_n_finished_matches_mapping, last_n_finished_matches
 
     def calculate_num_double_points_used(matches_and_bets: list[dict]) -> dict[str, int]:
         user_double_points_mapping = {}
@@ -364,7 +356,7 @@ def calculate_current_standings() -> list[dict]:
 
     matches_and_bets = (
         matches_table.select(
-            "id, status, home_team_goals, away_team_goals, start_time, bets(user_id, predicted_home_goals, predicted_away_goals, doublePoints(*))"
+            "id, status, home_team_goals, away_team_goals, home_team_name, away_team_name, start_time, bets(user_id, predicted_home_goals, predicted_away_goals, doublePoints(*))"
         )
         .eq("show", True)
         .order("start_time", desc=True)
@@ -378,7 +370,7 @@ def calculate_current_standings() -> list[dict]:
     user_points_mapping = calculate_user_points(matches_and_bets)
     user_potential_points_mapping = calculate_user_potential_points(
         matches_and_bets)
-    user_points_in_last_n_finished_matches_mapping = (
+    user_points_in_last_n_finished_matches_mapping, last_n_finished_matches = (
         calculate_user_points_in_last_n_finished_matches(
             matches_and_bets, user_ids, 5)
     )
@@ -406,7 +398,7 @@ def calculate_current_standings() -> list[dict]:
         key=lambda x: (-(x["points"] + x["potential_points"]), x["name"].lower()), reverse=False)
     for index, entry in enumerate(standings):
         entry["rank"] = index + 1
-    return standings
+    return standings, last_n_finished_matches
 
 
 @functools.lru_cache(maxsize=100)

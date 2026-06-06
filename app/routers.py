@@ -153,12 +153,13 @@ def read_root(request: Request):
         return response
     try:
         _ = auth.check_user_session(access_token)
-        league_standings = handlers.calculate_current_standings()
+        league_standings, last_n_finished_matches = handlers.calculate_current_standings()
         response = templates.TemplateResponse(
             request=request,
             name="index.html",
             context={
                 "standings": league_standings,
+                "last_n_finished_matches": last_n_finished_matches,
             },
         )
         return response

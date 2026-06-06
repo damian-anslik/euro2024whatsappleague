@@ -29,8 +29,10 @@
                     <td>
                         <div class="matches">
                             {% for points in user.points_in_last_n_finished_matches %}
+                            {% set match = last_n_finished_matches[loop.index0] %}
                             <span id={{"incorrect" if not points else "correct-score" if points in [5, 10]
-                                else "correct-margin" if points in [3, 6] else "correct-winner" if points in [1, 2] }}>
+                                else "correct-margin" if points in [3, 6] else "correct-winner" if points in [1, 2] }}
+                                title="{{ match.home_team_name }} vs {{ match.away_team_name }}">
                                 {{ points if points else 0}}
                             </span>
                             {% endfor %}
