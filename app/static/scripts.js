@@ -386,7 +386,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     getMatches(),
     getUserBets(),
   ]);
-  console.log(matches);
+  let finishedGames = matches.num_finished_matches || 0; 
+  let totalGames = 104;
+  let progressPercentage = Math.min((finishedGames / totalGames) * 100, 100);
+  document.getElementById("progress-bar-fill").style.width = `${progressPercentage}%`;
+  document.getElementById("progress-text").innerText = `${finishedGames} / ${totalGames} Matches Completed`;
   let ongoingMatches = matches.ongoing;
   let upcomingMatches = matches.upcoming;
   let finishedMatches = matches.finished;
