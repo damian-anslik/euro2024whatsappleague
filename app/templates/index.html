@@ -2,13 +2,6 @@
 
 {% block content %}
 <div class="league-container">
-    <div class="progress-container" style="margin-bottom: 2rem;">
-        <h3>📊 Tournament Progress</h3>
-        <div class="progress-bar-background" style="background: #e0e0e0; border-radius: 8px; width: 100%; height: 20px; overflow: hidden;">
-            <div id="progress-bar-fill" style="background: #4CAF50; width: 0%; height: 100%; transition: width 0.5s ease-in-out;"></div>
-        </div>
-        <p id="progress-text" style="text-align: center; font-weight: bold; margin-top: 0.5rem;">Loading progress...</p>
-    </div>
     <h3>🏆 Leaderboard</h3>
     <div class="table-container">
         <table>
@@ -52,6 +45,13 @@
     </div>
     <div class="loading-indicator-container">
         <div class="loading-indicator"></div>
+    </div>
+    <div class="progress-container" style="margin-bottom: 2rem;">
+        <h3>📊 Tournament Progress</h3>
+        <div class="progress-bar-background" style="background: #e0e0e0; border-radius: 8px; width: 100%; height: 20px; overflow: hidden;">
+            <div id="progress-bar-fill" style="background: #4CAF50; width: 0%; height: 100%; transition: width 0.5s ease-in-out;"></div>
+        </div>
+        <p id="progress-text" style="text-align: center; font-weight: bold; margin-top: 0.5rem;">Loading progress...</p>
     </div>
     <div class="ongoing-fixtures" hidden>
         <h3>⚽ Ongoing Matches</h3>
