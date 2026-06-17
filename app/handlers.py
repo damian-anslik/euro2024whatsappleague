@@ -52,6 +52,17 @@ except Exception as e:
     raise e
 
 
+@functools.lru_cache(maxsize=1)
+def get_finished_matches_count_handler() -> int:
+    response = (
+        matches_table.select("id", count="exact")
+        .eq("show", True)
+        .in_("status", finished_match_statuses)
+        .execute()
+    )
+    return response.count or 0
+    
+
 def insert_bet(
     user_id: str,
     match_id: int,
@@ -202,6 +213,7 @@ def upsert_fixtures(force: bool = False) -> list[dict]:
     # Clear the cache for get_matches_handler and calculate_current_standings when fixtures are upserted
     get_matches_handler.cache_clear()
     calculate_current_standings.cache_clear()
+    get_finished_matches_count_handler.cache_clear()
     return response_data
 
 
@@ -490,6 +502,7 @@ def get_matches_handler(
         "ongoing": ongoing_matches,
         "upcoming": upcoming_matches,
         "finished": finished_matches,
+        "num_finished_matches": get_finished_matches_count_handler(),
     }
 
 # @functools.lru_cache()
